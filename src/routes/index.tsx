@@ -1,6 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -55,7 +53,7 @@ const FEATURES = [
 ];
 
 function Landing() {
-  const apps = Route.useLoaderData();
+  const apps: { id: string; name: string; slug: string }[] = Route.useLoaderData();
   const demoAppId = apps[0]?.id;
 
   return (
@@ -127,7 +125,6 @@ function Landing() {
         <p className="mt-2 text-sm text-muted-foreground">
           Chaque application utilise le même tunnel et sa propre clé API.
         </p>
-        <Suspense fallback={null}>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {apps.map((app) => (
               <div
@@ -142,7 +139,6 @@ function Landing() {
               </div>
             ))}
           </div>
-        </Suspense>
       </section>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
@@ -151,5 +147,3 @@ function Landing() {
     </div>
   );
 }
-
-export { useSuspenseQuery };
