@@ -13,10 +13,13 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps.$appId'
 import { Route as ApiPublicWebhookSmsRouteImport } from './routes/api/public/webhook/sms'
+import { Route as ApiPublicV1RelayPingRouteImport } from './routes/api/public/v1/relay/ping'
 import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
 import { Route as ApiPublicV1CheckoutInitRouteImport } from './routes/api/public/v1/checkout/init'
 
@@ -39,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRelayRoute = AuthenticatedRelayRouteImport.update({
+  id: '/relay',
+  path: '/relay',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -49,6 +57,11 @@ const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
   path: '/api-docs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
   id: '/apps/$appId',
   path: '/apps/$appId',
@@ -57,6 +70,11 @@ const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
 const ApiPublicWebhookSmsRoute = ApiPublicWebhookSmsRouteImport.update({
   id: '/api/public/webhook/sms',
   path: '/api/public/webhook/sms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1RelayPingRoute = ApiPublicV1RelayPingRouteImport.update({
+  id: '/api/public/v1/relay/ping',
+  path: '/api/public/v1/relay/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicV1LicenseVerifyRoute =
@@ -75,23 +93,29 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
+  '/api/public/v1/relay/ping': typeof ApiPublicV1RelayPingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
+  '/api/public/v1/relay/ping': typeof ApiPublicV1RelayPingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -99,12 +123,15 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/api-docs': typeof AuthenticatedApiDocsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/relay': typeof AuthenticatedRelayRoute
   '/_authenticated/apps/$appId': typeof AuthenticatedAppsAppIdRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
+  '/api/public/v1/relay/ping': typeof ApiPublicV1RelayPingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -112,35 +139,44 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/admin'
     | '/api-docs'
     | '/dashboard'
+    | '/relay'
     | '/apps/$appId'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
+    | '/api/public/v1/relay/ping'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/admin'
     | '/api-docs'
     | '/dashboard'
+    | '/relay'
     | '/apps/$appId'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
+    | '/api/public/v1/relay/ping'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/sitemap.xml'
+    | '/_authenticated/admin'
     | '/_authenticated/api-docs'
     | '/_authenticated/dashboard'
+    | '/_authenticated/relay'
     | '/_authenticated/apps/$appId'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
+    | '/api/public/v1/relay/ping'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -151,6 +187,7 @@ export interface RootRouteChildren {
   ApiPublicWebhookSmsRoute: typeof ApiPublicWebhookSmsRoute
   ApiPublicV1CheckoutInitRoute: typeof ApiPublicV1CheckoutInitRoute
   ApiPublicV1LicenseVerifyRoute: typeof ApiPublicV1LicenseVerifyRoute
+  ApiPublicV1RelayPingRoute: typeof ApiPublicV1RelayPingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -183,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/relay': {
+      id: '/_authenticated/relay'
+      path: '/relay'
+      fullPath: '/relay'
+      preLoaderRoute: typeof AuthenticatedRelayRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -197,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApiDocsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/apps/$appId': {
       id: '/_authenticated/apps/$appId'
       path: '/apps/$appId'
@@ -209,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/webhook/sms'
       fullPath: '/api/public/webhook/sms'
       preLoaderRoute: typeof ApiPublicWebhookSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/relay/ping': {
+      id: '/api/public/v1/relay/ping'
+      path: '/api/public/v1/relay/ping'
+      fullPath: '/api/public/v1/relay/ping'
+      preLoaderRoute: typeof ApiPublicV1RelayPingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/license/verify': {
@@ -229,14 +287,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedApiDocsRoute: typeof AuthenticatedApiDocsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedRelayRoute: typeof AuthenticatedRelayRoute
   AuthenticatedAppsAppIdRoute: typeof AuthenticatedAppsAppIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedApiDocsRoute: AuthenticatedApiDocsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedRelayRoute: AuthenticatedRelayRoute,
   AuthenticatedAppsAppIdRoute: AuthenticatedAppsAppIdRoute,
 }
 
@@ -251,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWebhookSmsRoute: ApiPublicWebhookSmsRoute,
   ApiPublicV1CheckoutInitRoute: ApiPublicV1CheckoutInitRoute,
   ApiPublicV1LicenseVerifyRoute: ApiPublicV1LicenseVerifyRoute,
+  ApiPublicV1RelayPingRoute: ApiPublicV1RelayPingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

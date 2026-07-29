@@ -16,52 +16,207 @@ export type Database = {
     Tables: {
       apps: {
         Row: {
+          amount_regex: string
           api_key: string
           created_at: string
           id: string
+          moncash_number: string | null
           name: string
+          name_regex: string
+          natcash_number: string | null
+          owner_id: string | null
+          qr_image_url: string | null
+          reference_regex: string
+          relay_last_seen_at: string | null
+          sender_whitelist: string[]
           slug: string
+          strict_name_match: boolean
+          updated_at: string
         }
         Insert: {
+          amount_regex?: string
           api_key?: string
           created_at?: string
           id?: string
+          moncash_number?: string | null
           name: string
+          name_regex?: string
+          natcash_number?: string | null
+          owner_id?: string | null
+          qr_image_url?: string | null
+          reference_regex?: string
+          relay_last_seen_at?: string | null
+          sender_whitelist?: string[]
           slug: string
+          strict_name_match?: boolean
+          updated_at?: string
         }
         Update: {
+          amount_regex?: string
           api_key?: string
           created_at?: string
           id?: string
+          moncash_number?: string | null
           name?: string
+          name_regex?: string
+          natcash_number?: string | null
+          owner_id?: string | null
+          qr_image_url?: string | null
+          reference_regex?: string
+          relay_last_seen_at?: string | null
+          sender_whitelist?: string[]
           slug?: string
+          strict_name_match?: boolean
+          updated_at?: string
         }
         Relationships: []
+      }
+      platform_invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          developer_email: string | null
+          developer_id: string
+          due_date: string | null
+          id: string
+          period: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          developer_email?: string | null
+          developer_id: string
+          due_date?: string | null
+          id?: string
+          period?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          developer_email?: string | null
+          developer_id?: string
+          due_date?: string | null
+          id?: string
+          period?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          id: string
+          platform_name: string
+          relay_apk_url: string
+          saas_monthly_price: number
+          saas_yearly_price: number
+          support_email: string
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          platform_name?: string
+          relay_apk_url?: string
+          saas_monthly_price?: number
+          saas_yearly_price?: number
+          support_email?: string
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          platform_name?: string
+          relay_apk_url?: string
+          saas_monthly_price?: number
+          saas_yearly_price?: number
+          support_email?: string
+          trial_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      relay_logs: {
+        Row: {
+          app_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          raw_content: string
+          sender: string | null
+          status: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          raw_content: string
+          sender?: string | null
+          status?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          raw_content?: string
+          sender?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relay_logs_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_logs: {
         Row: {
           amount_detected: number | null
+          app_id: string | null
           id: string
           matched_subscription_id: string | null
           processed_at: string
           raw_content: string
+          reason: string | null
+          reference: string | null
+          sender_name: string | null
           sender_phone: string | null
+          status: string
         }
         Insert: {
           amount_detected?: number | null
+          app_id?: string | null
           id?: string
           matched_subscription_id?: string | null
           processed_at?: string
           raw_content: string
+          reason?: string | null
+          reference?: string | null
+          sender_name?: string | null
           sender_phone?: string | null
+          status?: string
         }
         Update: {
           amount_detected?: number | null
+          app_id?: string | null
           id?: string
           matched_subscription_id?: string | null
           processed_at?: string
           raw_content?: string
+          reason?: string | null
+          reference?: string | null
+          sender_name?: string | null
           sender_phone?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -83,6 +238,7 @@ export type Database = {
           id: string
           plan_type: string
           provider: string
+          reference: string | null
           status: string
           user_id: string
           user_phone: string | null
@@ -96,6 +252,7 @@ export type Database = {
           id?: string
           plan_type?: string
           provider?: string
+          reference?: string | null
           status?: string
           user_id: string
           user_phone?: string | null
@@ -109,6 +266,7 @@ export type Database = {
           id?: string
           plan_type?: string
           provider?: string
+          reference?: string | null
           status?: string
           user_id?: string
           user_phone?: string | null
@@ -156,6 +314,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      owns_app: { Args: { _app_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

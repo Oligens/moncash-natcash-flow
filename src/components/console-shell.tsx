@@ -1,31 +1,60 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { LayoutGrid, LogOut, Terminal } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { LayoutGrid, LogOut, ShieldCheck, Smartphone, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ZakaLogo } from "@/components/zaka-logo";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyRole } from "@/lib/admin.functions";
+import { cn } from "@/lib/utils";
+
+const NAV = [
+  { to: "/dashboard", label: "Applications", icon: LayoutGrid },
+  { to: "/relay", label: "Zaka Relay", icon: Smartphone },
+  { to: "/api-docs", label: "API", icon: Terminal },
+] as const;
 
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const fetchRole = useServerFn(getMyRole);
+  const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => fetchRole() });
 
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-6">
-            <Link to="/" className="font-display text-lg font-bold">
-              Kès<span className="text-primary">Pro</span>
+            <Link to="/">
+              <ZakaLogo markClassName="size-8" />
             </Link>
-            <div className="flex items-center gap-1">
-              <Button asChild variant="ghost" size="sm" className="gap-2">
-                <Link to="/dashboard">
-                  <LayoutGrid className="size-4" /> Applications
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm" className="gap-2">
-                <Link to="/api-docs">
-                  <Terminal className="size-4" /> API
-                </Link>
-              </Button>
+            <div className="flex flex-wrap items-center gap-1">
+              {NAV.map((item) => (
+                <Button
+                  key={item.to}
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={cn("gap-2", pathname.startsWith(item.to) && "bg-secondary")}
+                >
+                  <Link to={item.to}>
+                    <item.icon className="size-4" /> {item.label}
+                  </Link>
+                </Button>
+              ))}
+              {role?.isAdmin && (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={cn("gap-2", pathname.startsWith("/admin") && "bg-secondary")}
+                >
+                  <Link to="/admin">
+                    <ShieldCheck className="size-4" /> Administration
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
           <Button
@@ -34,7 +63,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
             className="gap-2"
             onClick={async () => {
               await supabase.auth.signOut();
-              navigate({ to: "/auth" });
+              navigate({ to: "/auth", replace: true });
             }}
           >
             <LogOut className="size-4" /> Déconnexion
