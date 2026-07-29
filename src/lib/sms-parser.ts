@@ -1,29 +1,72 @@
-/** Analyse d'un SMS de confirmation MonCash / Natcash. */
-export function parseSms(raw: string): { amount: number | null; phone: string | null; name: string | null } {
+/** Moteur de parsing & extraction intelligente des SMS MonCash / Natcash. */
+
+export type ParseRules = {
+  senderWhitelist: string[];
+  amountRegex: string;
+  nameRegex: string;
+  referenceRegex: string;
+};
+
+export const DEFAULT_RULES: ParseRules = {
+  senderWhitelist: ["MonCash", "Digicel", "Natcash", "Natcom"],
+  amountRegex: String.raw`(?:HTG|Gdes?|Gourdes?)\s*([\d.,]+)|([\d.,]+)\s*(?:HTG|Gdes?|Gourdes?)`,
+  nameRegex: String.raw`(?:de|from|soti nan|par|sent by)\s+([A-Za-zÀ-ÿ'’\-]+(?:\s+[A-Za-zÀ-ÿ'’\-]+){0,3})`,
+  referenceRegex: String.raw`(?:Ref|Reference|Transaction ID|ID)\s*[:#]?\s*([A-Za-z0-9]{4,})`,
+};
+
+function firstGroup(text: string, pattern: string): string | null {
+  try {
+    const match = text.match(new RegExp(pattern, "i"));
+    if (!match) return null;
+    return match.slice(1).find((g) => typeof g === "string" && g.length > 0) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Un masque accepte le joker `*` : « MonCash* », « *Natcom* », « 509* ». */
+export function matchesMask(value: string, mask: string) {
+  const escaped = mask
+    .trim()
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*");
+  try {
+    return new RegExp(`^${escaped}$`, "i").test(value.trim());
+  } catch {
+    return false;
+  }
+}
+
+/** Whitelist des expéditeurs officiels. Liste vide = aucun filtrage. */
+export function isSenderAllowed(sender: string | null | undefined, whitelist: string[]) {
+  const list = (whitelist ?? []).filter((m) => m.trim().length > 0);
+  if (list.length === 0) return true;
+  if (!sender) return false;
+  return list.some((mask) => matchesMask(sender, mask) || matchesMask(sender, `*${mask}*`));
+}
+
+export function parseSms(raw: string, rules: ParseRules = DEFAULT_RULES) {
   const text = raw.replace(/\s+/g, " ").trim();
 
-  // Montant : "250.00 HTG", "HTG 2,500", "Gdes 250"
-  const amountMatch =
-    text.match(/(?:HTG|Gdes?|Gourdes?)\s*([\d.,]+)/i) ||
-    text.match(/([\d.,]+)\s*(?:HTG|Gdes?|Gourdes?)/i);
+  const amountRaw = firstGroup(text, rules.amountRegex || DEFAULT_RULES.amountRegex);
   let amount: number | null = null;
-  if (amountMatch) {
-    const normalized = amountMatch[1].replace(/,/g, "");
-    const value = Number.parseFloat(normalized);
+  if (amountRaw) {
+    const value = Number.parseFloat(amountRaw.replace(/,/g, ""));
     amount = Number.isFinite(value) ? value : null;
   }
 
-  // Téléphone haïtien : 509XXXXXXXX ou XXXX-XXXX
   const phoneMatch = text.match(/(?:\+?509)?[\s-]?(\d{4})[\s-]?(\d{4})/);
   const phone = phoneMatch ? `509${phoneMatch[1]}${phoneMatch[2]}` : null;
 
-  // Nom de l'émetteur : "de Jean Baptiste", "from Marie Claire", "soti nan Ricardo Louis"
-  const nameMatch = text.match(
-    /(?:de|from|soti nan|par|sent by)\s+([A-Za-zÀ-ÿ'’-]+(?:\s+[A-Za-zÀ-ÿ'’-]+){0,3})/i,
-  );
-  const name = nameMatch ? nameMatch[1].trim() : null;
+  const name = firstGroup(text, rules.nameRegex || DEFAULT_RULES.nameRegex);
+  const reference = firstGroup(text, rules.referenceRegex || DEFAULT_RULES.referenceRegex);
 
-  return { amount, phone, name };
+  return {
+    amount,
+    phone,
+    name: name ? name.trim() : null,
+    reference: reference ? reference.trim() : null,
+  };
 }
 
 export function normalizeName(value: string) {
@@ -34,4 +77,13 @@ export function normalizeName(value: string) {
     .replace(/[^a-z ]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Rapprochement du nom : strict (égalité normalisée) ou souple (inclusion). */
+export function namesMatch(a: string, b: string, strict: boolean) {
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  if (!na || !nb) return false;
+  if (strict) return na === nb;
+  return na.includes(nb) || nb.includes(na);
 }
