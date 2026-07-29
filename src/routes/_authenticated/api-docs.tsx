@@ -7,18 +7,18 @@ import { toast } from "sonner";
 import { ConsoleShell } from "@/components/console-shell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listApps } from "@/lib/dashboard.functions";
+import { listMyApps } from "@/lib/developer.functions";
 
 export const Route = createFileRoute("/_authenticated/api-docs")({
   head: () => ({
     meta: [
-      { title: "Paramètres API — Console Kès Pro" },
+      { title: "Paramètres API — Console Zaka" },
       {
         name: "description",
         content:
           "Clés API, webhook SMS et endpoint de vérification de licence pour brancher une nouvelle application.",
       },
-      { property: "og:title", content: "Paramètres API — Console Kès Pro" },
+      { property: "og:title", content: "Paramètres API — Console Zaka" },
       {
         property: "og:description",
         content: "Documentation des endpoints REST d'abonnement MonCash et Natcash.",
@@ -64,7 +64,7 @@ function Snippet({ title, code }: { title: string; code: string }) {
 }
 
 function ApiSettings() {
-  const fetchApps = useServerFn(listApps);
+  const fetchApps = useServerFn(listMyApps);
   const { data, isLoading } = useQuery({ queryKey: ["apps"], queryFn: () => fetchApps() });
   const origin = typeof window !== "undefined" ? window.location.origin : "https://votre-app";
 
