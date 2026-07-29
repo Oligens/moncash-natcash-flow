@@ -16,13 +16,13 @@ import { PLANS, formatHTG } from "@/lib/plans";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kès Pro — Abonnements Pro via MonCash & Natcash" },
+      { title: "Zaka — Abonnements Pro via MonCash & Natcash" },
       {
         name: "description",
         content:
           "Tunnel de paiement, validation automatique par SMS et tableaux de bord multi-applications pour vos abonnements Pro en gourdes.",
       },
-      { property: "og:title", content: "Kès Pro — Abonnements Pro via MonCash & Natcash" },
+      { property: "og:title", content: "Zaka — Abonnements Pro via MonCash & Natcash" },
       {
         property: "og:description",
         content:
@@ -61,7 +61,7 @@ function Landing() {
       <header className="border-b border-border/60">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="font-display text-lg font-bold">
-            Kès<span className="text-primary">Pro</span>
+            Zaka<span className="text-primary">Pro</span>
           </span>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
@@ -142,7 +142,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
-        Kès Pro — abonnements Pro en gourdes, activés automatiquement.
+        Zaka — abonnements Pro en gourdes, activés automatiquement.
       </footer>
     </div>
   );

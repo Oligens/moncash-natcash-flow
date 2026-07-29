@@ -10,10 +10,10 @@ import { lovable } from "@/integrations/lovable/index";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Connexion — Console Kès Pro" },
+      { title: "Connexion — Console Zaka" },
       { name: "description", content: "Connectez-vous à la console de gestion des abonnements Pro MonCash et Natcash." },
-      { property: "og:title", content: "Connexion — Console Kès Pro" },
-      { property: "og:description", content: "Accès sécurisé à la console d'abonnements Kès Pro." },
+      { property: "og:title", content: "Connexion — Console Zaka" },
+      { property: "og:description", content: "Accès sécurisé à la console d'abonnements Zaka." },
     ],
   }),
   component: AuthPage,
@@ -66,7 +66,7 @@ function AuthPage() {
     <main className="surface-hero flex min-h-screen items-center justify-center px-6">
       <div className="card-elevated w-full max-w-sm rounded-2xl border border-border bg-card p-8">
         <h1 className="font-display text-2xl font-bold">
-          Kès<span className="text-primary">Pro</span>
+          Zaka<span className="text-primary">Pro</span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "signin" ? "Connectez-vous à votre console." : "Créez votre compte console."}
