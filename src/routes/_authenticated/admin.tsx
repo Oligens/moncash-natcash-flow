@@ -30,6 +30,9 @@ import {
 import { formatDate, formatHTG } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: () => {
+    if (!isAdminUnlocked()) throw notFound();
+  },
   head: () => ({
     meta: [
       { title: "Administration de la plateforme Zaka" },
