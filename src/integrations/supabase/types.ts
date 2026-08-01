@@ -307,18 +307,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_platform_public_settings: {
-        Args: never
-        Returns: {
-          id: string
-          platform_name: string
-          relay_apk_url: string
-          saas_monthly_price: number
-          saas_yearly_price: number
-          support_email: string
-          trial_days: number
-        }[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
