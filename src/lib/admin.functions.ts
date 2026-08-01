@@ -21,6 +21,28 @@ export const getMyRole = createServerFn({ method: "GET" })
     return { isAdmin: Boolean(data), userId: context.userId };
   });
 
+/** Déverrouillage secret de l'espace administrateur (mot de passe + rôle admin). */
+export const unlockAdminAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ password: z.string().min(1).max(200) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const expected = process.env["ZAKA_ADMIN_PASSWORD"];
+    if (!expected) throw new Error("Accès administrateur non configuré");
+
+    const { createHash, timingSafeEqual } = await import("node:crypto");
+    const a = createHash("sha256").update(data.password, "utf8").digest();
+    const b = createHash("sha256").update(expected, "utf8").digest();
+    if (!timingSafeEqual(a, b)) return { ok: false as const };
+
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) return { ok: false as const };
+
+    return { ok: true as const };
+  });
+
 /** Réglages non sensibles de la plateforme, servis par le backend (table lisible admin uniquement). */
 export const getPlatformSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

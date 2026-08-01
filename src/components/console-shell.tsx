@@ -1,12 +1,10 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { LayoutGrid, LogOut, ShieldCheck, Smartphone, Terminal } from "lucide-react";
+import { LayoutGrid, LogOut, Smartphone, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ZakaLogo } from "@/components/zaka-logo";
+import { AdminUnlock } from "@/components/admin-unlock";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyRole } from "@/lib/admin.functions";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -18,8 +16,7 @@ const NAV = [
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const fetchRole = useServerFn(getMyRole);
-  const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => fetchRole() });
+
 
   return (
     <div className="min-h-screen">
@@ -43,18 +40,6 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                   </Link>
                 </Button>
               ))}
-              {role?.isAdmin && (
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className={cn("gap-2", pathname.startsWith("/admin") && "bg-secondary")}
-                >
-                  <Link to="/admin">
-                    <ShieldCheck className="size-4" /> Administration
-                  </Link>
-                </Button>
-              )}
             </div>
           </div>
           <Button
@@ -71,6 +56,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+      <AdminUnlock />
     </div>
   );
 }
