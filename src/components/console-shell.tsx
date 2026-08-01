@@ -40,18 +40,6 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                   </Link>
                 </Button>
               ))}
-              {role?.isAdmin && (
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className={cn("gap-2", pathname.startsWith("/admin") && "bg-secondary")}
-                >
-                  <Link to="/admin">
-                    <ShieldCheck className="size-4" /> Administration
-                  </Link>
-                </Button>
-              )}
             </div>
           </div>
           <Button
