@@ -56,6 +56,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+      <AdminUnlock />
     </div>
   );
 }
