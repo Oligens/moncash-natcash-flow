@@ -21,10 +21,12 @@ export const getMyRole = createServerFn({ method: "GET" })
     return { isAdmin: Boolean(data), userId: context.userId };
   });
 
+/** Réglages non sensibles de la plateforme, servis par le backend (table lisible admin uniquement). */
 export const getPlatformSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("platform_settings")
       .select(
         "id, platform_name, saas_monthly_price, saas_yearly_price, trial_days, support_email, relay_apk_url",
