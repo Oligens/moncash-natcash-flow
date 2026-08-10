@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -92,7 +92,7 @@ async function copy(value: string, message: string) {
   toast.success(message);
 }
 
-function Callout({ title, children }: { title: string; children: React.ReactNode }) {
+function Callout({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
       <div className="flex items-center gap-2 text-sm font-semibold">
