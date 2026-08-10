@@ -59,10 +59,10 @@ function Landing() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border/60">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="font-display text-lg font-bold">
-            Zaka<span className="text-primary">Pro</span>
-          </span>
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+          <Link to="/" aria-label="Accueil Zaka">
+            <ZakaLogo markClassName="size-9 sm:size-10" />
+          </Link>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
               <Link to="/api-docs">API</Link>
