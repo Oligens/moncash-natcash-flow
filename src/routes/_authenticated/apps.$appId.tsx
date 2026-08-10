@@ -12,7 +12,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowLeft, Copy, KeyRound, RefreshCw, TrendingUp, Users, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Eye,
+  EyeOff,
+  Info,
+  KeyRound,
+  Link2 as LinkIcon,
+  RefreshCw,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ConsoleShell } from "@/components/console-shell";
 import { RelayBlock } from "@/components/relay-block";
