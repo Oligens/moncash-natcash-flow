@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PaymentTunnel } from "@/components/payment-tunnel";
+import { ZakaLogo } from "@/components/zaka-logo";
 import { listPublicApps } from "@/lib/checkout.functions";
 import { PLANS, formatHTG } from "@/lib/plans";
 
