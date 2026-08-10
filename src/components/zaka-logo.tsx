@@ -6,8 +6,10 @@ export function ZakaMark({ className }: { className?: string }) {
     <img
       src={logoAsset.url}
       alt="Logo Zaka"
-      className={cn("size-9 object-contain", className)}
-      loading="lazy"
+      width={72}
+      height={72}
+      className={cn("size-8 shrink-0 object-contain sm:size-9", className)}
+      decoding="async"
     />
   );
 }

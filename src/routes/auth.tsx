@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { ZakaMark } from "@/components/zaka-logo";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -65,8 +66,11 @@ function AuthPage() {
   return (
     <main className="surface-hero flex min-h-screen items-center justify-center px-6">
       <div className="card-elevated w-full max-w-sm rounded-2xl border border-border bg-card p-8">
-        <h1 className="font-display text-2xl font-bold">
-          Zaka<span className="text-primary">Pro</span>
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold">
+          <ZakaMark className="size-9 sm:size-10" />
+          <span>
+            Za<span className="text-primary">ka</span>
+          </span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "signin" ? "Connectez-vous à votre console." : "Créez votre compte console."}
