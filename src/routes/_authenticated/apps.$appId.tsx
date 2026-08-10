@@ -338,7 +338,7 @@ function AppDetailPage() {
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold">Moyens de paiement</h2>
                 <TooltipProvider>
-                  <Tooltip>
+                  <UiTooltip>
                     <TooltipTrigger asChild>
                       <Info className="size-4 cursor-help text-muted-foreground" />
                     </TooltipTrigger>
@@ -346,7 +346,8 @@ function AppDetailPage() {
                       Ces numéros sont affichés à vos utilisateurs pendant le tunnel de paiement
                       Zaka.
                     </TooltipContent>
-                  </Tooltip>
+                  </UiTooltip>
+
                 </TooltipProvider>
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
