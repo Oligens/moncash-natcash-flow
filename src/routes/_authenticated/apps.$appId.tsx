@@ -212,9 +212,12 @@ function AppDetailPage() {
       <Tabs defaultValue="overview" className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="api">API & Intégration</TabsTrigger>
           <TabsTrigger value="relay">Relais SMS</TabsTrigger>
           <TabsTrigger value="settings">Paramètres avancés</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="overview" className="mt-6 space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
