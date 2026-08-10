@@ -187,6 +187,11 @@ function AppDetailPage() {
 
   const { app, kpis, chart, transactions } = data;
 
+  const origin = typeof window === "undefined" ? "https://zaka.ht" : window.location.origin;
+  const payUrl = `${origin}/pay?api_key=${app.api_key}&plan=${linkPlan}${
+    linkUser.trim() ? `&user_id=${encodeURIComponent(linkUser.trim())}` : ""
+  }`;
+
   return (
     <ConsoleShell>
       <Button asChild variant="ghost" size="sm" className="gap-2">
