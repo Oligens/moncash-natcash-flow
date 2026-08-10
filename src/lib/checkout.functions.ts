@@ -49,6 +49,21 @@ export const getCheckoutStatus = createServerFn({ method: "GET" })
     return { status: row?.status ?? "unknown", expiresAt: row?.expires_at ?? null };
   });
 
+/** Résout une application à partir de sa clé API publique de redirection (page /pay). */
+export const resolveAppByApiKey = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ apiKey: z.string().trim().min(10).max(120) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: app, error } = await supabaseAdmin
+      .from("apps")
+      .select("id, name, moncash_number, natcash_number, qr_image_url")
+      .eq("api_key", data.apiKey)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!app) return null;
+    return app;
+  });
+
 /** Liste publique et minimale des applications connectées (démo du tunnel). */
 export const listPublicApps = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
