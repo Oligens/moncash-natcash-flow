@@ -85,6 +85,24 @@ export const Route = createFileRoute("/_authenticated/apps/$appId")({
   component: AppDetailPage,
 });
 
+type LinkPlan = "mensuel" | "annuel";
+
+async function copy(value: string, message: string) {
+  await navigator.clipboard.writeText(value);
+  toast.success(message);
+}
+
+function Callout({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Info className="size-4 text-primary" /> {title}
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
 function AppDetailPage() {
   const { appId } = Route.useParams();
   const queryClient = useQueryClient();
