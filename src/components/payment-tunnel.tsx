@@ -24,14 +24,19 @@ import { cn } from "@/lib/utils";
 import { PLANS, PROVIDERS, formatHTG, type PlanType, type Provider } from "@/lib/plans";
 import { getCheckoutStatus, initDemoCheckout } from "@/lib/checkout.functions";
 
-type Props = { appId: string; userId?: string; triggerLabel?: string };
+type Props = { appId: string; userId?: string; triggerLabel?: string; defaultPlan?: PlanType };
 
 const STEPS = ["Abonnement", "Paiement", "Confirmation"];
 
-export function PaymentTunnel({ appId, userId = "demo_user", triggerLabel = "Passer au plan Pro" }: Props) {
+export function PaymentTunnel({
+  appId,
+  userId = "demo_user",
+  triggerLabel = "Passer au plan Pro",
+  defaultPlan = "monthly",
+}: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [plan, setPlan] = useState<PlanType>("monthly");
+  const [plan, setPlan] = useState<PlanType>(defaultPlan);
   const [provider, setProvider] = useState<Provider>("moncash");
   const [accountName, setAccountName] = useState("");
   const [phone, setPhone] = useState("");

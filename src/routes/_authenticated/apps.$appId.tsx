@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -12,7 +12,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowLeft, Copy, KeyRound, RefreshCw, TrendingUp, Users, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Eye,
+  EyeOff,
+  Info,
+  KeyRound,
+  Link2 as LinkIcon,
+  RefreshCw,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ConsoleShell } from "@/components/console-shell";
 import { RelayBlock } from "@/components/relay-block";
@@ -23,6 +35,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -60,6 +85,24 @@ export const Route = createFileRoute("/_authenticated/apps/$appId")({
   component: AppDetailPage,
 });
 
+type LinkPlan = "mensuel" | "annuel";
+
+async function copy(value: string, message: string) {
+  await navigator.clipboard.writeText(value);
+  toast.success(message);
+}
+
+function Callout({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Info className="size-4 text-primary" /> {title}
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
 function AppDetailPage() {
   const { appId } = Route.useParams();
   const queryClient = useQueryClient();
@@ -76,6 +119,10 @@ function AppDetailPage() {
     queryKey: ["platform-settings"],
     queryFn: () => fetchSettings(),
   });
+
+  const [showKey, setShowKey] = useState(false);
+  const [linkPlan, setLinkPlan] = useState<LinkPlan>("mensuel");
+  const [linkUser, setLinkUser] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -158,6 +205,11 @@ function AppDetailPage() {
 
   const { app, kpis, chart, transactions } = data;
 
+  const origin = typeof window === "undefined" ? "https://zaka.ht" : window.location.origin;
+  const payUrl = `${origin}/pay?api_key=${app.api_key}&plan=${linkPlan}${
+    linkUser.trim() ? `&user_id=${encodeURIComponent(linkUser.trim())}` : ""
+  }`;
+
   return (
     <ConsoleShell>
       <Button asChild variant="ghost" size="sm" className="gap-2">
@@ -200,9 +252,12 @@ function AppDetailPage() {
       <Tabs defaultValue="overview" className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="api">API & Intégration</TabsTrigger>
           <TabsTrigger value="relay">Relais SMS</TabsTrigger>
           <TabsTrigger value="settings">Paramètres avancés</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="overview" className="mt-6 space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -304,10 +359,24 @@ function AppDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-6">
+        <TabsContent value="config" className="mt-6">
           <div className="grid max-w-4xl gap-6">
             <section className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="text-lg font-semibold">Réception des paiements</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Moyens de paiement</h2>
+                <TooltipProvider>
+                  <UiTooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="size-4 cursor-help text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      Ces numéros sont affichés à vos utilisateurs pendant le tunnel de paiement
+                      Zaka.
+                    </TooltipContent>
+                  </UiTooltip>
+
+                </TooltipProvider>
+              </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nom de l'application</Label>
@@ -341,7 +410,109 @@ function AppDetailPage() {
                   />
                 </div>
               </div>
+              <div className="mt-5">
+                <Button
+                  disabled={settingsMutation.isPending}
+                  onClick={() => settingsMutation.mutate()}
+                >
+                  Enregistrer mes numéros
+                </Button>
+              </div>
+              <Callout title="Étape 1 — Configuration initiale">
+                Configurez vos numéros de réception ci-dessus. Zaka affichera ces numéros à vos
+                utilisateurs lorsqu'ils choisiront de passer en mode Pro.
+              </Callout>
             </section>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="api" className="mt-6">
+          <div className="grid max-w-4xl gap-6">
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold">Clé API (x-api-key)</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Gardez-la secrète. En cas de compromission, régénérez-la : l'ancienne clé cesse
+                immédiatement de fonctionner.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded-xl border border-border bg-muted/40 px-4 py-3 font-mono text-xs">
+                  {showKey ? app.api_key : `${app.api_key.slice(0, 12)}${"•".repeat(18)}`}
+                </code>
+                <Button size="sm" variant="outline" onClick={() => setShowKey((v) => !v)}>
+                  {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => copy(app.api_key, "Clé API copiée")}>
+                  <Copy className="size-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={keyMutation.isPending}
+                  onClick={() => keyMutation.mutate()}
+                >
+                  <RefreshCw className="size-4" /> Régénérer ma clé
+                </Button>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-2">
+                <LinkIcon className="size-4 text-primary" />
+                <h2 className="text-lg font-semibold">Générateur d'URL de paiement</h2>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Plan proposé</Label>
+                  <Select value={linkPlan} onValueChange={(v) => setLinkPlan(v as LinkPlan)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mensuel">Mensuel</SelectItem>
+                      <SelectItem value="annuel">Annuel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Identifiant utilisateur (optionnel)</Label>
+                  <Input
+                    value={linkUser}
+                    placeholder="user_123"
+                    onChange={(e) => setLinkUser(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded-xl border border-border bg-muted/40 px-4 py-3 font-mono text-xs">
+                  {payUrl}
+                </code>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => copy(payUrl, "Lien de paiement copié")}
+                >
+                  <Copy className="size-4" /> Copier le lien
+                </Button>
+              </div>
+              <Callout title="Étape 2 — Le bouton « Passer en Pro »">
+                Insérez un bouton dans votre application. Au clic, redirigez simplement
+                l'utilisateur vers cette URL. Zaka se charge de tout le processus de paiement
+                (choix du plan, MonCash/Natcash, confirmation SMS).
+              </Callout>
+              <Callout title="Étape 3 — Validation du paiement">
+                Une fois le paiement validé, l'abonnement passe en <code>active</code>. Votre
+                serveur peut le vérifier à tout moment via{" "}
+                <code>GET /api/public/v1/license/verify?user_id=…</code> avec votre en-tête{" "}
+                <code>x-api-key</code>.
+              </Callout>
+            </section>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <div className="grid max-w-4xl gap-6">
+
 
             <section className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-lg font-semibold">Filtrage & parsing intelligent</h2>
