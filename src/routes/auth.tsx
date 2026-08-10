@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { ZakaMark } from "@/components/zaka-logo";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
