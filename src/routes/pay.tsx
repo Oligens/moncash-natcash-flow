@@ -37,7 +37,8 @@ export const Route = createFileRoute("/pay")({
 });
 
 function PayPage() {
-  const { api_key: apiKey, user_id: userId } = Route.useSearch();
+  const { api_key: apiKey, user_id: userId, plan } = Route.useSearch();
+  const defaultPlan = plan === "annuel" || plan === "yearly" ? "yearly" : "monthly";
   const resolve = useServerFn(resolveAppByApiKey);
 
   const { data, isLoading } = useQuery({
@@ -65,7 +66,7 @@ function PayPage() {
             Paiement en gourdes via MonCash ou Natcash. Votre accès Pro est activé automatiquement
             dès la confirmation du transfert.
           </p>
-          <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} />
+          <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} defaultPlan={defaultPlan} />
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 text-primary" /> Paiement hébergé et sécurisé par Zaka
           </p>
