@@ -102,6 +102,10 @@ function AppDetailPage() {
     queryFn: () => fetchSettings(),
   });
 
+  const [showKey, setShowKey] = useState(false);
+  const [linkPlan, setLinkPlan] = useState<LinkPlan>("mensuel");
+  const [linkUser, setLinkUser] = useState("");
+
   const [form, setForm] = useState({
     name: "",
     moncashNumber: "",
