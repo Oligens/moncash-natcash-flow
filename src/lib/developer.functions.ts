@@ -6,7 +6,46 @@ const appIdSchema = z.object({ appId: z.string().uuid() });
 const APP_COLUMNS = `id, name, slug, api_key, created_at, owner_id, moncash_number, natcash_number,
   qr_image_url, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match, relay_last_seen_at`;
 
-type AppRow = Record<string, unknown> & { id: string };
+export type AppRow = {
+  id: string;
+  name: string;
+  slug: string;
+  api_key: string;
+  created_at: string;
+  owner_id: string | null;
+  moncash_number: string | null;
+  natcash_number: string | null;
+  qr_image_url: string | null;
+  sender_whitelist: string[];
+  amount_regex: string;
+  name_regex: string;
+  reference_regex: string;
+  strict_name_match: boolean;
+  relay_last_seen_at: string | null;
+};
+
+type RelayLogRow = {
+  id: string;
+  raw_content: string;
+  sender: string | null;
+  status: string;
+  detail: string | null;
+  created_at: string;
+};
+
+type SubscriptionRow = {
+  id: string;
+  user_id: string;
+  user_phone: string | null;
+  account_name: string;
+  provider: string;
+  plan_type: string;
+  amount: string;
+  status: string;
+  reference: string | null;
+  created_at: string;
+  expires_at: string | null;
+};
 
 /** Applications appartenant au développeur connecté (isolation multi-tenant). */
 export const listMyApps = createServerFn({ method: "GET" }).handler(async () => {
@@ -88,12 +127,7 @@ export const getAppOverview = createServerFn({ method: "GET" })
               created_at, expires_at
        FROM subscriptions WHERE app_id = $1 ORDER BY created_at DESC`,
       [data.appId],
-    )) as {
-      status: string;
-      amount: string;
-      created_at: string;
-      expires_at: string | null;
-    }[];
+    )) as SubscriptionRow[];
 
     const rows = subs;
     const active = rows.filter((r) => r.status === "active");
@@ -208,9 +242,9 @@ export const getRelayActivity = createServerFn({ method: "GET" })
       `SELECT id, raw_content, sender, status, detail, created_at FROM relay_logs
        WHERE app_id = $1 ORDER BY created_at DESC LIMIT 30`,
       [data.appId],
-    )) as Record<string, unknown>[];
+    )) as RelayLogRow[];
 
-    const lastSeen = (app["relay_last_seen_at"] as string | null) ?? null;
+    const lastSeen = app.relay_last_seen_at ?? null;
     const online = lastSeen ? Date.now() - new Date(lastSeen).getTime() < 10 * 60 * 1000 : false;
     return { lastSeen, online, logs };
   });
