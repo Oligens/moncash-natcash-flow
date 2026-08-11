@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { signIn, signUp } from "@/lib/auth.functions";
 import { ZakaMark } from "@/components/zaka-logo";
 
 export const Route = createFileRoute("/auth")({
@@ -32,16 +31,10 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
+        await signUp({ data: { email, password } });
         toast.success("Compte créé, vous êtes connecté.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signIn({ data: { email, password } });
       }
       navigate({ to: "/dashboard" });
     } catch (err) {
@@ -49,18 +42,6 @@ function AuthPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function google() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Connexion Google impossible");
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard" });
   }
 
   return (
@@ -102,10 +83,6 @@ function AuthPage() {
             {mode === "signin" ? "Se connecter" : "Créer le compte"}
           </Button>
         </form>
-
-        <Button variant="outline" className="mt-3 w-full" onClick={google}>
-          Continuer avec Google
-        </Button>
 
         <button
           type="button"

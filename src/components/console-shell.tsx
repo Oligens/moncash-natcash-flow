@@ -4,7 +4,7 @@ import { LayoutGrid, LogOut, Smartphone, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ZakaLogo } from "@/components/zaka-logo";
 import { AdminUnlock } from "@/components/admin-unlock";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth.functions";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -47,7 +47,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
             size="sm"
             className="gap-2"
             onClick={async () => {
-              await supabase.auth.signOut();
+              await signOut();
               navigate({ to: "/auth", replace: true });
             }}
           >
