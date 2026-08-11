@@ -14,63 +14,59 @@ const initSchema = z.object({
 export const initDemoCheckout = createServerFn({ method: "POST" })
   .inputValidator((input) => initSchema.parse(input))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { db } = await import("./db.server");
+    const sql = db();
     const amount = data.planType === "yearly" ? 2500 : 250;
 
-    const { data: row, error } = await supabaseAdmin
-      .from("subscriptions")
-      .insert({
-        app_id: data.appId,
-        user_id: data.userId,
-        user_phone: data.userPhone || null,
-        account_name: data.accountName,
-        provider: data.provider,
-        plan_type: data.planType,
-        amount,
-        status: "pending",
-      })
-      .select("id, amount, status")
-      .single();
+    const rows = (await sql`
+      INSERT INTO subscriptions (app_id, user_id, user_phone, account_name, provider, plan_type, amount, status)
+      VALUES (${data.appId}, ${data.userId}, ${data.userPhone || null}, ${data.accountName},
+              ${data.provider}, ${data.planType}, ${amount}, 'pending')
+      RETURNING id, amount, status
+    `) as { id: string; amount: string; status: string }[];
 
-    if (error) throw new Error(error.message);
+    const row = rows[0]!;
     return { subscriptionId: row.id, amount: Number(row.amount), status: row.status };
   });
 
 export const getCheckoutStatus = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ subscriptionId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
-      .from("subscriptions")
-      .select("status, expires_at")
-      .eq("id", data.subscriptionId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
+    const { db } = await import("./db.server");
+    const sql = db();
+    const rows = (await sql`
+      SELECT status, expires_at FROM subscriptions WHERE id = ${data.subscriptionId} LIMIT 1
+    `) as { status: string; expires_at: string | null }[];
+    const row = rows[0];
     return { status: row?.status ?? "unknown", expiresAt: row?.expires_at ?? null };
   });
+
+export type PublicApp = {
+  id: string;
+  name: string;
+  moncash_number: string | null;
+  natcash_number: string | null;
+  qr_image_url: string | null;
+};
 
 /** Résout une application à partir de sa clé API publique de redirection (page /pay). */
 export const resolveAppByApiKey = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ apiKey: z.string().trim().min(10).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: app, error } = await supabaseAdmin
-      .from("apps")
-      .select("id, name, moncash_number, natcash_number, qr_image_url")
-      .eq("api_key", data.apiKey)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!app) return null;
-    return app;
+    const { db } = await import("./db.server");
+    const sql = db();
+    const rows = (await sql`
+      SELECT id, name, moncash_number, natcash_number, qr_image_url
+      FROM apps WHERE api_key = ${data.apiKey} LIMIT 1
+    `) as PublicApp[];
+    return rows[0] ?? null;
   });
 
 /** Liste publique et minimale des applications connectées (démo du tunnel). */
 export const listPublicApps = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("apps")
-    .select("id, name, slug")
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  const { db } = await import("./db.server");
+  const sql = db();
+  return (await sql`
+    SELECT id, name, slug FROM apps ORDER BY created_at ASC
+  `) as { id: string; name: string; slug: string }[];
 });
