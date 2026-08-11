@@ -20,12 +20,13 @@ export const Route = createFileRoute("/api/public/v1/checkout/init")({
         const apiKey = request.headers.get("x-api-key");
         if (!apiKey) return json({ error: "Clé API manquante (x-api-key)" }, 401);
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: app } = await supabaseAdmin
-          .from("apps")
-          .select("id, name")
-          .eq("api_key", apiKey)
-          .maybeSingle();
+        const { db } = await import("@/lib/db.server");
+        const sql = db();
+        const apps = (await sql`SELECT id, name FROM apps WHERE api_key = ${apiKey} LIMIT 1`) as {
+          id: string;
+          name: string;
+        }[];
+        const app = apps[0];
         if (!app) return json({ error: "Clé API invalide" }, 401);
 
         const parsed = bodySchema.safeParse(await request.json().catch(() => null));
@@ -35,23 +36,14 @@ export const Route = createFileRoute("/api/public/v1/checkout/init")({
         const body = parsed.data;
         const amount = body.amount ?? (body.plan_type === "yearly" ? 2500 : 250);
 
-        const { data: row, error } = await supabaseAdmin
-          .from("subscriptions")
-          .insert({
-            app_id: app.id,
-            user_id: body.user_id,
-            user_phone: body.user_phone ?? null,
-            account_name: body.account_name,
-            provider: body.provider,
-            plan_type: body.plan_type,
-            amount,
-            status: "pending",
-          })
-          .select("id, amount, status, created_at")
-          .single();
+        const rows = (await sql`
+          INSERT INTO subscriptions (app_id, user_id, user_phone, account_name, provider, plan_type, amount, status)
+          VALUES (${app.id}, ${body.user_id}, ${body.user_phone ?? null}, ${body.account_name},
+                  ${body.provider}, ${body.plan_type}, ${amount}, 'pending')
+          RETURNING id, amount, status, created_at
+        `) as { id: string; amount: string; status: string; created_at: string }[];
 
-        if (error) return json({ error: error.message }, 500);
-
+        const row = rows[0]!;
         return json({
           subscription_id: row.id,
           app: app.name,
