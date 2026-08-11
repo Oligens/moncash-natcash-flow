@@ -1,84 +1,101 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const appIdSchema = z.object({ appId: z.string().uuid() });
 
-const APP_COLUMNS =
-  "id, name, slug, api_key, created_at, owner_id, moncash_number, natcash_number, qr_image_url, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match, relay_last_seen_at";
+const APP_COLUMNS = `id, name, slug, api_key, created_at, owner_id, moncash_number, natcash_number,
+  qr_image_url, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match, relay_last_seen_at`;
 
-/** Applications appartenant au développeur connecté (RLS multi-tenant). */
-export const listMyApps = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data: apps, error } = await context.supabase
-      .from("apps")
-      .select(APP_COLUMNS)
-      .eq("owner_id", context.userId)
-      .order("created_at", { ascending: true });
-    if (error) throw new Error(error.message);
+type AppRow = Record<string, unknown> & { id: string };
 
-    const { data: subs, error: subsError } = await context.supabase
-      .from("subscriptions")
-      .select("app_id, status, amount");
-    if (subsError) throw new Error(subsError.message);
+/** Applications appartenant au développeur connecté (isolation multi-tenant). */
+export const listMyApps = createServerFn({ method: "GET" }).handler(async () => {
+  const { db } = await import("./db.server");
+  const { requireUser } = await import("./auth.server");
+  const user = await requireUser();
+  const sql = db();
 
-    return (apps ?? []).map((app) => {
-      const rows = (subs ?? []).filter((s) => s.app_id === app.id);
-      return {
-        ...app,
-        activeCount: rows.filter((r) => r.status === "active").length,
-        pendingCount: rows.filter((r) => r.status === "pending").length,
-        revenue: rows
-          .filter((r) => r.status === "active")
-          .reduce((sum, r) => sum + Number(r.amount), 0),
-      };
-    });
+  const apps = (await sql.query(
+    `SELECT ${APP_COLUMNS} FROM apps WHERE owner_id = $1 ORDER BY created_at ASC`,
+    [user.id],
+  )) as AppRow[];
+
+  const subs = (await sql.query(
+    `SELECT s.app_id, s.status, s.amount FROM subscriptions s
+     JOIN apps a ON a.id = s.app_id WHERE a.owner_id = $1`,
+    [user.id],
+  )) as { app_id: string; status: string; amount: string }[];
+
+  return apps.map((app) => {
+    const rows = subs.filter((s) => s.app_id === app.id);
+    return {
+      ...app,
+      activeCount: rows.filter((r) => r.status === "active").length,
+      pendingCount: rows.filter((r) => r.status === "pending").length,
+      revenue: rows
+        .filter((r) => r.status === "active")
+        .reduce((sum, r) => sum + Number(r.amount), 0),
+    };
   });
+});
 
 export const createApp = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ name: z.string().trim().min(2).max(60) }).parse(input))
-  .handler(async ({ data, context }) => {
-    const slug = data.name
+  .handler(async ({ data }) => {
+    const { db } = await import("./db.server");
+    const { requireUser } = await import("./auth.server");
+    const user = await requireUser();
+    const sql = db();
+
+    const base = data.name
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40);
+    const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const { data: row, error } = await context.supabase
-      .from("apps")
-      .insert({ name: data.name, slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`, owner_id: context.userId })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { id: row.id };
+    const rows = (await sql`
+      INSERT INTO apps (name, slug, owner_id) VALUES (${data.name}, ${slug}, ${user.id}) RETURNING id
+    `) as { id: string }[];
+    return { id: rows[0]!.id };
   });
 
+async function ownedApp(appId: string, ownerId: string) {
+  const { db } = await import("./db.server");
+  const sql = db();
+  const rows = (await sql.query(`SELECT ${APP_COLUMNS} FROM apps WHERE id = $1 AND owner_id = $2`, [
+    appId,
+    ownerId,
+  ])) as AppRow[];
+  const app = rows[0];
+  if (!app) throw new Error("Application introuvable");
+  return app;
+}
+
 export const getAppOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => appIdSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    const { data: app, error: appError } = await context.supabase
-      .from("apps")
-      .select(APP_COLUMNS)
-      .eq("id", data.appId)
-      .maybeSingle();
-    if (appError) throw new Error(appError.message);
-    if (!app) throw new Error("Application introuvable");
+  .handler(async ({ data }) => {
+    const { db } = await import("./db.server");
+    const { requireUser } = await import("./auth.server");
+    const user = await requireUser();
+    const app = await ownedApp(data.appId, user.id);
+    const sql = db();
 
-    const { data: subs, error } = await context.supabase
-      .from("subscriptions")
-      .select(
-        "id, user_id, user_phone, account_name, provider, plan_type, amount, status, created_at, expires_at, reference",
-      )
-      .eq("app_id", data.appId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    const subs = (await sql.query(
+      `SELECT id, user_id, user_phone, account_name, provider, plan_type, amount, status, reference,
+              created_at, expires_at
+       FROM subscriptions WHERE app_id = $1 ORDER BY created_at DESC`,
+      [data.appId],
+    )) as {
+      status: string;
+      amount: string;
+      created_at: string;
+      expires_at: string | null;
+    }[];
 
-    const rows = subs ?? [];
+    const rows = subs;
     const active = rows.filter((r) => r.status === "active");
     const revenue = active.reduce((sum, r) => sum + Number(r.amount), 0);
     const soon = active.filter((r) => {
@@ -136,62 +153,64 @@ const settingsSchema = z.object({
 });
 
 export const updateAppSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => settingsSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("apps")
-      .update({
-        name: data.name,
-        moncash_number: data.moncashNumber || null,
-        natcash_number: data.natcashNumber || null,
-        qr_image_url: data.qrImageUrl || null,
-        sender_whitelist: data.senderWhitelist,
-        amount_regex: data.amountRegex,
-        name_regex: data.nameRegex,
-        reference_regex: data.referenceRegex,
-        strict_name_match: data.strictNameMatch,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.appId);
-    if (error) throw new Error(error.message);
+  .handler(async ({ data }) => {
+    const { db } = await import("./db.server");
+    const { requireUser } = await import("./auth.server");
+    const user = await requireUser();
+    const sql = db();
+
+    await sql.query(
+      `UPDATE apps SET name = $1, moncash_number = $2, natcash_number = $3, qr_image_url = $4,
+         sender_whitelist = $5, amount_regex = $6, name_regex = $7, reference_regex = $8,
+         strict_name_match = $9, updated_at = now()
+       WHERE id = $10 AND owner_id = $11`,
+      [
+        data.name,
+        data.moncashNumber || null,
+        data.natcashNumber || null,
+        data.qrImageUrl || null,
+        data.senderWhitelist,
+        data.amountRegex,
+        data.nameRegex,
+        data.referenceRegex,
+        data.strictNameMatch,
+        data.appId,
+        user.id,
+      ],
+    );
     return { ok: true };
   });
 
 export const regenerateApiKey = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => appIdSchema.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
+    const { db } = await import("./db.server");
+    const { requireUser } = await import("./auth.server");
+    const user = await requireUser();
+    const sql = db();
     const key = `sk_live_${crypto.randomUUID().replace(/-/g, "")}`;
-    const { error } = await context.supabase
-      .from("apps")
-      .update({ api_key: key, updated_at: new Date().toISOString() })
-      .eq("id", data.appId);
-    if (error) throw new Error(error.message);
+    await sql`UPDATE apps SET api_key = ${key}, updated_at = now() WHERE id = ${data.appId} AND owner_id = ${user.id}`;
     return { apiKey: key };
   });
 
 /** Journal des transferts du téléphone relais + statut de connexion. */
 export const getRelayActivity = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => appIdSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    const { data: app, error: appError } = await context.supabase
-      .from("apps")
-      .select("relay_last_seen_at")
-      .eq("id", data.appId)
-      .maybeSingle();
-    if (appError) throw new Error(appError.message);
+  .handler(async ({ data }) => {
+    const { db } = await import("./db.server");
+    const { requireUser } = await import("./auth.server");
+    const user = await requireUser();
+    const app = await ownedApp(data.appId, user.id);
+    const sql = db();
 
-    const { data: logs, error } = await context.supabase
-      .from("relay_logs")
-      .select("id, raw_content, sender, status, detail, created_at")
-      .eq("app_id", data.appId)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    if (error) throw new Error(error.message);
+    const logs = (await sql.query(
+      `SELECT id, raw_content, sender, status, detail, created_at FROM relay_logs
+       WHERE app_id = $1 ORDER BY created_at DESC LIMIT 30`,
+      [data.appId],
+    )) as Record<string, unknown>[];
 
-    const lastSeen = app?.relay_last_seen_at ?? null;
+    const lastSeen = (app["relay_last_seen_at"] as string | null) ?? null;
     const online = lastSeen ? Date.now() - new Date(lastSeen).getTime() < 10 * 60 * 1000 : false;
-    return { lastSeen, online, logs: logs ?? [] };
+    return { lastSeen, online, logs };
   });
