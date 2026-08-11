@@ -14,6 +14,15 @@ const json = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+type AppConfig = {
+  id: string;
+  sender_whitelist: string[] | null;
+  amount_regex: string | null;
+  name_regex: string | null;
+  reference_regex: string | null;
+  strict_name_match: boolean | null;
+};
+
 export const Route = createFileRoute("/api/public/webhook/sms")({
   server: {
     handlers: {
@@ -21,22 +30,19 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
         const apiKey = request.headers.get("x-api-key");
         if (!apiKey) return json({ error: "Clé API manquante (x-api-key)" }, 401);
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { db } = await import("@/lib/db.server");
+        const sql = db();
+
         // La clé API identifie le développeur et donc l'application ciblée.
-        const { data: app } = await supabaseAdmin
-          .from("apps")
-          .select(
-            "id, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match",
-          )
-          .eq("api_key", apiKey)
-          .maybeSingle();
+        const apps = (await sql`
+          SELECT id, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match
+          FROM apps WHERE api_key = ${apiKey} LIMIT 1
+        `) as AppConfig[];
+        const app = apps[0];
         if (!app) return json({ error: "Clé API invalide" }, 401);
 
         // Toute requête authentifiée maintient le statut « en ligne » du relais.
-        await supabaseAdmin
-          .from("apps")
-          .update({ relay_last_seen_at: new Date().toISOString() })
-          .eq("id", app.id);
+        await sql`UPDATE apps SET relay_last_seen_at = now() WHERE id = ${app.id}`;
 
         const parsed = bodySchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ error: "Corps de requête invalide" }, 400);
@@ -45,17 +51,21 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
         const sender = parsed.data.sender ?? null;
 
         const logRelay = (status: string, detail: string) =>
-          supabaseAdmin
-            .from("relay_logs")
-            .insert({ app_id: app.id, raw_content: message, sender, status, detail });
+          sql`INSERT INTO relay_logs (app_id, raw_content, sender, status, detail)
+              VALUES (${app.id}, ${message}, ${sender}, ${status}, ${detail})`;
 
-        const logSms = (fields: Record<string, unknown>) =>
-          supabaseAdmin.from("sms_logs").insert({
-            app_id: app.id,
-            raw_content: message,
-            sender_phone: sender,
-            ...fields,
-          });
+        const logSms = (fields: {
+          status: string;
+          reason?: string | null;
+          amount_detected?: number | null;
+          sender_name?: string | null;
+          reference?: string | null;
+          matched_subscription_id?: string | null;
+        }) =>
+          sql`INSERT INTO sms_logs (app_id, raw_content, sender_phone, status, reason, amount_detected, sender_name, reference, matched_subscription_id)
+              VALUES (${app.id}, ${message}, ${sender}, ${fields.status}, ${fields.reason ?? null},
+                      ${fields.amount_detected ?? null}, ${fields.sender_name ?? null},
+                      ${fields.reference ?? null}, ${fields.matched_subscription_id ?? null})`;
 
         // 1. Whitelist des expéditeurs officiels
         const rules = {
@@ -77,21 +87,30 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
         if (amount == null) {
           await Promise.all([
             logRelay("failed", "Montant non détecté"),
-            logSms({ status: "unmatched", reason: "Montant non détecté", sender_name: name, reference }),
+            logSms({
+              status: "unmatched",
+              reason: "Montant non détecté",
+              sender_name: name,
+              reference,
+            }),
           ]);
           return json({ matched: false, reason: "Montant non détecté" }, 200);
         }
 
         // 3. Validation croisée : montant du plan + nom du compte émetteur
-        const { data: candidates } = await supabaseAdmin
-          .from("subscriptions")
-          .select("id, account_name, user_phone, plan_type, amount")
-          .eq("app_id", app.id)
-          .eq("status", "pending")
-          .eq("amount", amount)
-          .order("created_at", { ascending: true });
+        const candidates = (await sql`
+          SELECT id, account_name, user_phone, plan_type, amount FROM subscriptions
+          WHERE app_id = ${app.id} AND status = 'pending' AND amount = ${amount}
+          ORDER BY created_at ASC
+        `) as {
+          id: string;
+          account_name: string;
+          user_phone: string | null;
+          plan_type: string;
+          amount: string;
+        }[];
 
-        const list = candidates ?? [];
+        const list = candidates;
         const strict = app.strict_name_match ?? true;
         const senderPhone = sender && /\d{6,}/.test(sender) ? sender : phone;
 
@@ -104,7 +123,7 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
                 .endsWith(senderPhone.replace(/\D/g, "").slice(-8)),
             )) ||
           null;
-        if (!match && !strict && list.length === 1) match = list[0];
+        if (!match && !strict && list.length === 1) match = list[0]!;
 
         if (!match) {
           await Promise.all([
@@ -125,19 +144,12 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
         if (match.plan_type === "yearly") expiresAt.setFullYear(expiresAt.getFullYear() + 1);
         else expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-        const { error: updateError } = await supabaseAdmin
-          .from("subscriptions")
-          .update({
-            status: "active",
-            expires_at: expiresAt.toISOString(),
-            reference,
-            user_phone: senderPhone ?? undefined,
-          })
-          .eq("id", match.id);
-        if (updateError) {
-          await logRelay("failed", updateError.message);
-          return json({ error: updateError.message }, 500);
-        }
+        await sql`
+          UPDATE subscriptions
+          SET status = 'active', expires_at = ${expiresAt.toISOString()}, reference = ${reference},
+              user_phone = coalesce(${senderPhone}, user_phone)
+          WHERE id = ${match.id}
+        `;
 
         await Promise.all([
           logRelay("success", `Abonnement activé (${amount} HTG)`),
