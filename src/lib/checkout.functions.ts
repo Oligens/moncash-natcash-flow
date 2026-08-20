@@ -53,13 +53,37 @@ export type PublicApp = {
 export const resolveAppByApiKey = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ apiKey: z.string().trim().min(10).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    const { db } = await import("./db.server");
-    const sql = db();
-    const rows = (await sql`
-      SELECT id, name, moncash_number, natcash_number, qr_image_url
-      FROM apps WHERE api_key = ${data.apiKey} LIMIT 1
-    `) as PublicApp[];
-    return rows[0] ?? null;
+    try {
+      const { db } = await import("./db.server");
+      const sql = db();
+      
+      // Validation du format de la clé API (doit commencer par sk_live_ ou sk_test_)
+      const apiKey = data.apiKey.trim();
+      if (!apiKey.startsWith("sk_")) {
+        console.warn("[resolveAppByApiKey] Format de clé API invalide:", apiKey.substring(0, 10) + "...");
+        return null;
+      }
+      
+      const rows = (await sql`
+        SELECT id, name, moncash_number, natcash_number, qr_image_url
+        FROM apps WHERE api_key = ${apiKey} LIMIT 1
+      `) as PublicApp[];
+      
+      const app = rows[0] ?? null;
+      
+      if (!app) {
+        console.warn("[resolveAppByApiKey] Clé API non trouvée dans la base de données:", apiKey.substring(0, 15) + "...");
+      }
+      
+      return app;
+    } catch (error) {
+      // Log l'erreur pour le débogage serveur
+      console.error("[resolveAppByApiKey] Erreur lors de la résolution de l'application:", error);
+      
+      // En cas d'erreur de base de données ou autre, on retourne null au lieu de propager l'erreur
+      // Cela évite de faire crasher toute la requête
+      return null;
+    }
   });
 
 /** Liste publique et minimale des applications connectées (démo du tunnel). */

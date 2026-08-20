@@ -9,29 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as PayRouteImport } from './routes/pay'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as PayRouteImport } from './routes/pay'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
 import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps.$appId'
 import { Route as ApiPublicWebhookSmsRouteImport } from './routes/api/public/webhook/sms'
-import { Route as ApiPublicV1RelayPingRouteImport } from './routes/api/public/v1/relay/ping'
-import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
 import { Route as ApiPublicV1CheckoutInitRouteImport } from './routes/api/public/v1/checkout/init'
+import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
+import { Route as ApiPublicV1RelayPingRouteImport } from './routes/api/public/v1/relay/ping'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PayRoute = PayRouteImport.update({
-  id: '/pay',
-  path: '/pay',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -39,23 +38,19 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const PayRoute = PayRouteImport.update({
+  id: '/pay',
+  path: '/pay',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRelayRoute = AuthenticatedRelayRouteImport.update({
-  id: '/relay',
-  path: '/relay',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
@@ -63,9 +58,14 @@ const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
   path: '/api-docs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelayRoute = AuthenticatedRelayRouteImport.update({
+  id: '/relay',
+  path: '/relay',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
@@ -78,9 +78,9 @@ const ApiPublicWebhookSmsRoute = ApiPublicWebhookSmsRouteImport.update({
   path: '/api/public/webhook/sms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicV1RelayPingRoute = ApiPublicV1RelayPingRouteImport.update({
-  id: '/api/public/v1/relay/ping',
-  path: '/api/public/v1/relay/ping',
+const ApiPublicV1CheckoutInitRoute = ApiPublicV1CheckoutInitRouteImport.update({
+  id: '/api/public/v1/checkout/init',
+  path: '/api/public/v1/checkout/init',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicV1LicenseVerifyRoute =
@@ -89,9 +89,9 @@ const ApiPublicV1LicenseVerifyRoute =
     path: '/api/public/v1/license/verify',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicV1CheckoutInitRoute = ApiPublicV1CheckoutInitRouteImport.update({
-  id: '/api/public/v1/checkout/init',
-  path: '/api/public/v1/checkout/init',
+const ApiPublicV1RelayPingRoute = ApiPublicV1RelayPingRouteImport.update({
+  id: '/api/public/v1/relay/ping',
+  path: '/api/public/v1/relay/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -205,25 +205,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pay': {
-      id: '/pay'
-      path: '/pay'
-      fullPath: '/pay'
-      preLoaderRoute: typeof PayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -233,25 +219,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/relay': {
-      id: '/_authenticated/relay'
-      path: '/relay'
-      fullPath: '/relay'
-      preLoaderRoute: typeof AuthenticatedRelayRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/pay': {
+      id: '/pay'
+      path: '/pay'
+      fullPath: '/pay'
+      preLoaderRoute: typeof PayRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/api-docs': {
@@ -261,11 +254,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApiDocsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relay': {
+      id: '/_authenticated/relay'
+      path: '/relay'
+      fullPath: '/relay'
+      preLoaderRoute: typeof AuthenticatedRelayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/apps/$appId': {
@@ -282,11 +282,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhookSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/v1/relay/ping': {
-      id: '/api/public/v1/relay/ping'
-      path: '/api/public/v1/relay/ping'
-      fullPath: '/api/public/v1/relay/ping'
-      preLoaderRoute: typeof ApiPublicV1RelayPingRouteImport
+    '/api/public/v1/checkout/init': {
+      id: '/api/public/v1/checkout/init'
+      path: '/api/public/v1/checkout/init'
+      fullPath: '/api/public/v1/checkout/init'
+      preLoaderRoute: typeof ApiPublicV1CheckoutInitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/license/verify': {
@@ -296,11 +296,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1LicenseVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/v1/checkout/init': {
-      id: '/api/public/v1/checkout/init'
-      path: '/api/public/v1/checkout/init'
-      fullPath: '/api/public/v1/checkout/init'
-      preLoaderRoute: typeof ApiPublicV1CheckoutInitRouteImport
+    '/api/public/v1/relay/ping': {
+      id: '/api/public/v1/relay/ping'
+      path: '/api/public/v1/relay/ping'
+      fullPath: '/api/public/v1/relay/ping'
+      preLoaderRoute: typeof ApiPublicV1RelayPingRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -339,3 +339,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
