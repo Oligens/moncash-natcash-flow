@@ -8,6 +8,8 @@ const initSchema = z.object({
   userPhone: z.string().trim().max(20).optional().or(z.literal("")),
   provider: z.enum(["moncash", "natcash"]),
   planType: z.enum(["monthly", "yearly"]),
+  // Nouveau: permet de spécifier un plan personnalisé
+  customPlanKey: z.string().trim().max(50).optional(),
 });
 
 /** Démo interne du tunnel de paiement (les apps tierces passent par /api/v1/checkout/init). */
@@ -16,7 +18,24 @@ export const initDemoCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db } = await import("./db.server");
     const sql = db();
-    const amount = data.planType === "yearly" ? 2500 : 250;
+    
+    let amount: number;
+    
+    // Si un plan personnalisé est spécifié, récupérer son montant converti en HTG
+    if (data.customPlanKey) {
+      const { calculatePlanAmountInHTG } = await import("./currency.functions");
+      const planInfo = await calculatePlanAmountInHTG(data.appId, data.customPlanKey);
+      
+      if (!planInfo.planExists) {
+        throw new Error(`Le plan personnalisé "${data.customPlanKey}" n'existe pas ou n'est pas actif`);
+      }
+      
+      amount = planInfo.htgAmount;
+      console.log(`[initDemoCheckout] Plan personnalisé: ${planInfo.label}, ${planInfo.originalAmount} ${planInfo.currency} -> ${amount} HTG (taux: ${planInfo.rate})`);
+    } else {
+      // Utiliser les montants par défaut (abonnement Zaka Pro)
+      amount = data.planType === "yearly" ? 2500 : 250;
+    }
 
     const rows = (await sql`
       INSERT INTO subscriptions (app_id, user_id, user_phone, account_name, provider, plan_type, amount, status)
@@ -83,6 +102,67 @@ export const resolveAppByApiKey = createServerFn({ method: "GET" })
       // En cas d'erreur de base de données ou autre, on retourne null au lieu de propager l'erreur
       // Cela évite de faire crasher toute la requête
       return null;
+    }
+  });
+
+/** Récupère les plans personnalisés d'une application */
+export const getAppPlans = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ appId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const { db } = await import("./db.server");
+      const sql = db();
+      
+      const rows = (await sql`
+        SELECT plan_key, label, amount, currency, period, description, badge, sort_order
+        FROM app_plans
+        WHERE app_id = ${data.appId} AND is_active = true
+        ORDER BY sort_order ASC, created_at ASC
+      `) as { 
+        plan_key: string; 
+        label: string; 
+        amount: string; 
+        currency: string; 
+        period: string; 
+        description: string | null;
+        badge: string | null;
+        sort_order: number;
+      }[];
+      
+      // Convertir les montants en HTG pour chaque plan
+      const plansWithHTG = await Promise.all(
+        rows.map(async (row) => {
+          let htgAmount: number;
+          let rate: number;
+          
+          if (row.currency === "HTG") {
+            htgAmount = Number(row.amount);
+            rate = 1;
+          } else {
+            const { calculatePlanAmountInHTG } = await import("./currency.functions");
+            const planInfo = await calculatePlanAmountInHTG(data.appId, row.plan_key);
+            htgAmount = planInfo.htgAmount;
+            rate = planInfo.rate;
+          }
+          
+          return {
+            id: row.plan_key,
+            label: row.label,
+            originalAmount: Number(row.amount),
+            currency: row.currency,
+            htgAmount,
+            rate,
+            period: row.period,
+            description: row.description,
+            badge: row.badge,
+          };
+        })
+      );
+      
+      return plansWithHTG;
+    } catch (error) {
+      console.error("[getAppPlans] Erreur lors de la récupération des plans:", error);
+      return [];
     }
   });
 

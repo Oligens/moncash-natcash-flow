@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { PLANS, PROVIDERS, formatHTG, type PlanType, type Provider } from "@/lib/plans";
-import { getCheckoutStatus, initDemoCheckout } from "@/lib/checkout.functions";
+import { getCheckoutStatus, initDemoCheckout, getAppPlans } from "@/lib/checkout.functions";
 
 type Props = { appId: string; userId?: string; triggerLabel?: string; defaultPlan?: PlanType };
 
@@ -44,9 +44,21 @@ export function PaymentTunnel({
   const [submitting, setSubmitting] = useState(false);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("pending");
+  const [customPlanKey, setCustomPlanKey] = useState<string | null>(null);
 
   const init = useServerFn(initDemoCheckout);
   const check = useServerFn(getCheckoutStatus);
+  const fetchPlans = useServerFn(getAppPlans);
+
+  // Récupérer les plans personnalisés de l'application
+  const { data: customPlans } = useQuery({
+    queryKey: ["app-plans", appId],
+    queryFn: () => fetchPlans({ data: { appId } }),
+    enabled: open, // Ne charger que lorsque le dialog est ouvert
+    retry: false,
+  });
+
+  const hasCustomPlans = customPlans && customPlans.length > 0;
 
   useEffect(() => {
     if (!subscriptionId || status === "active") return;
@@ -87,6 +99,7 @@ export function PaymentTunnel({
           userPhone: phone.trim(),
           provider,
           planType: plan,
+          customPlanKey: customPlanKey ?? undefined,
         },
       });
       setSubscriptionId(res.subscriptionId);
@@ -157,28 +170,79 @@ export function PaymentTunnel({
 
         {step === 1 && (
           <div className="space-y-3">
-            {Object.values(PLANS).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPlan(p.id)}
-                className={cn(
-                  "w-full rounded-xl border p-4 text-left transition-colors",
-                  plan === p.id
-                    ? "border-primary bg-primary/10"
-                    : "border-border bg-card hover:border-primary/50",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-base font-semibold">{p.label}</span>
-                  {p.badge && <Badge variant="secondary">{p.badge}</Badge>}
-                </div>
-                <div className="mt-1 text-2xl font-bold text-primary">{formatHTG(p.amount)}</div>
-                <p className="text-xs text-muted-foreground">
-                  {p.period} · {p.hint}
+            {/* Afficher les plans personnalisés s'ils existent */}
+            {hasCustomPlans ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Choisissez votre abonnement pour {customPlans[0]?.label && "découvrir nos offres"}:
                 </p>
-              </button>
-            ))}
+                {customPlans.map((customPlan) => (
+                  <button
+                    key={customPlan.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomPlanKey(customPlan.id);
+                      // Pour les plans personnalisés, on garde monthly/yearly comme fallback
+                      if (!plan) setPlan("monthly");
+                    }}
+                    className={cn(
+                      "w-full rounded-xl border p-4 text-left transition-colors",
+                      customPlanKey === customPlan.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/50",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-base font-semibold">{customPlan.label}</span>
+                      {customPlan.badge && <Badge variant="secondary">{customPlan.badge}</Badge>}
+                    </div>
+                    <div className="mt-1 space-y-1">
+                      {customPlan.currency !== "HTG" && (
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(customPlan.originalAmount, customPlan.currency)} 
+                          {" → "}
+                        </div>
+                      )}
+                      <div className="text-2xl font-bold text-primary">
+                        {formatHTG(customPlan.htgAmount)}
+                      </div>
+                    </div>
+                    {customPlan.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {customPlan.description}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </>
+            ) : (
+              /* Plans par défaut Zaka Pro */
+              Object.values(PLANS).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setCustomPlanKey(null);
+                    setPlan(p.id);
+                  }}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-colors",
+                    plan === p.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/50",
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-display text-base font-semibold">{p.label}</span>
+                    {p.badge && <Badge variant="secondary">{p.badge}</Badge>}
+                  </div>
+                  <div className="mt-1 text-2xl font-bold text-primary">{formatHTG(p.amount)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {p.period} · {p.hint}
+                  </p>
+                </button>
+              ))
+            )}
             <Button className="w-full" onClick={() => setStep(2)}>
               Continuer
             </Button>
