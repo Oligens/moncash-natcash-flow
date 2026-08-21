@@ -63,6 +63,13 @@ import {
 } from "@/lib/developer.functions";
 import { getPlatformSettings } from "@/lib/admin.functions";
 import { formatDate, formatHTG } from "@/lib/plans";
+import {
+  getAppPlans,
+  createAppPlan,
+  updateAppPlan,
+  deleteAppPlan,
+  getExchangeRates,
+} from "@/lib/app-plans.functions";
 
 export const Route = createFileRoute("/_authenticated/apps/$appId")({
   head: () => ({
@@ -136,6 +143,32 @@ function AppDetailPage() {
     strictNameMatch: true,
   });
 
+  // États pour les plans personnalisés
+  const fetchPlans = useServerFn(getAppPlans);
+  const createPlan = useServerFn(createAppPlan);
+  const updatePlanMutation = useServerFn(updateAppPlan);
+  const deletePlanMutation = useServerFn(deleteAppPlan);
+  const fetchRates = useServerFn(getExchangeRates);
+
+  const { data: customPlans = [], refetch: refetchPlans } = useQuery({
+    queryKey: ["app-plans", appId],
+    queryFn: () => fetchPlans({ data: { appId } }),
+  });
+
+  const { data: exchangeRates = [] } = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: () => fetchRates(),
+  });
+
+  const [newPlan, setNewPlan] = useState({
+    planKey: "",
+    name: "",
+    amount: "",
+    currency: "USD",
+    period: "monthly" as "trial" | "monthly" | "yearly" | "custom",
+    description: "",
+  });
+
   useEffect(() => {
     if (!data?.app) return;
     const a = data.app;
@@ -187,6 +220,69 @@ function AppDetailPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const createPlanMutation = useMutation({
+    mutationFn: () =>
+      createPlan({
+        data: {
+          appId,
+          planKey: newPlan.planKey,
+          name: newPlan.name,
+          amount: parseFloat(newPlan.amount) || 0,
+          currency: newPlan.currency,
+          period: newPlan.period,
+          description: newPlan.description,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Plan créé avec succès");
+      setNewPlan({ planKey: "", name: "", amount: "", currency: "USD", period: "monthly", description: "" });
+      refetchPlans();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updatePlanMut = useMutation({
+    mutationFn: (plan: typeof customPlans[0] & { active: boolean }) =>
+      updatePlanMutation({
+        data: {
+          planId: plan.id,
+          appId,
+          name: plan.name,
+          amount: plan.amount,
+          currency: plan.currency,
+          period: plan.period,
+          description: plan.description ?? "",
+          active: plan.active,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Plan mis à jour");
+      refetchPlans();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deletePlanMut = useMutation({
+    mutationFn: (planId: string) => deletePlanMutation({ data: { planId, appId } }),
+    onSuccess: () => {
+      toast.success("Plan supprimé");
+      refetchPlans();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const getRateForCurrency = (currency: string) => {
+    const rate = exchangeRates.find((r: any) => r.currency === currency);
+    return rate?.rate_to_htg ?? null;
+  };
+
+  const formatAmountWithConversion = (amount: number, currency: string) => {
+    const rate = getRateForCurrency(currency);
+    if (!rate) return `${amount} ${currency}`;
+    const htgAmount = Math.ceil(amount * rate);
+    return `${amount} ${currency} (~${formatHTG(htgAmount)})`;
+  };
 
   if (isLoading) {
     return (
@@ -512,7 +608,156 @@ function AppDetailPage() {
 
         <TabsContent value="settings" className="mt-6">
           <div className="grid max-w-4xl gap-6">
+            {/* Section Plans Personnalisés */}
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold">Plans de tarification personnalisés</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Définissez vos propres plans pour cette application. Les montants seront convertis automatiquement en HTG lors du paiement.
+              </p>
 
+              {/* Formulaire d'ajout de plan */}
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Clé du plan</Label>
+                  <Input
+                    placeholder="ex: premium, essai, enterprise"
+                    value={newPlan.planKey}
+                    onChange={(e) => setNewPlan({ ...newPlan, planKey: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nom du plan</Label>
+                  <Input
+                    placeholder="ex: Plan Premium"
+                    value={newPlan.name}
+                    onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Période</Label>
+                  <Select
+                    value={newPlan.period}
+                    onValueChange={(v) => setNewPlan({ ...newPlan, period: v as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="trial">Essai</SelectItem>
+                      <SelectItem value="monthly">Mensuel</SelectItem>
+                      <SelectItem value="yearly">Annuel</SelectItem>
+                      <SelectItem value="custom">Personnalisé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Montant</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="15.00"
+                    value={newPlan.amount}
+                    onChange={(e) => setNewPlan({ ...newPlan, amount: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Devise</Label>
+                  <Select
+                    value={newPlan.currency}
+                    onValueChange={(v) => setNewPlan({ ...newPlan, currency: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="HTG">HTG (G)</SelectItem>
+                      <SelectItem value="CAD">CAD ($)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (optionnel)</Label>
+                  <Input
+                    placeholder="Avantages du plan..."
+                    value={newPlan.description}
+                    onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button
+                  disabled={createPlanMutation.isPending || !newPlan.planKey || !newPlan.name || !newPlan.amount}
+                  onClick={() => createPlanMutation.mutate()}
+                >
+                  {createPlanMutation.isPending ? "Création..." : "Ajouter le plan"}
+                </Button>
+              </div>
+
+              {/* Liste des plans existants */}
+              {customPlans.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  <h3 className="text-sm font-semibold">Plans configurés</h3>
+                  <div className="space-y-2">
+                    {customPlans.map((plan: any) => (
+                      <div
+                        key={plan.id}
+                        className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{plan.name}</span>
+                            <Badge variant={plan.active ? "default" : "secondary"} className="text-xs">
+                              {plan.active ? "Actif" : "Inactif"}
+                            </Badge>
+                            <code className="text-xs text-muted-foreground">({plan.plan_key})</code>
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {formatAmountWithConversion(plan.amount, plan.currency)} • {plan.period}
+                            {plan.description && ` • ${plan.description}`}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              updatePlanMut.mutate({ ...plan, active: !plan.active })
+                            }
+                          >
+                            {plan.active ? "Désactiver" : "Activer"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deletePlanMut.mutate(plan.id)}
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Taux de change actuels */}
+              {exchangeRates.length > 0 && (
+                <div className="mt-6 rounded-xl border border-border bg-primary/5 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Info className="size-4" /> Taux de change actuels
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    {exchangeRates.map((rate: any) => (
+                      <span key={rate.currency}>
+                        1 {rate.currency} = {Number(rate.rate_to_htg).toFixed(2)} HTG
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
 
             <section className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-lg font-semibold">Filtrage & parsing intelligent</h2>
