@@ -19,8 +19,8 @@ function fromB64url(value: string): Uint8Array {
 }
 
 function sessionSecret(): string {
-  const secret = process.env["ZAKA_SESSION_SECRET"];
-  if (!secret) throw new Error("ZAKA_SESSION_SECRET manquant");
+  const secret = process.env["ZAKA_SESSION_SECRET"] ?? process.env["JWT_SECRET"];
+  if (!secret) throw new Error("ZAKA_SESSION_SECRET ou JWT_SECRET manquant");
   return secret;
 }
 

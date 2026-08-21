@@ -22,8 +22,14 @@ import {
 } from "@/components/ui/table";
 import {
   createInvoice,
+  createPromoCode,
   getAdminOverview,
   getPlatformSettings,
+  listDeveloperSubscriptions,
+  listPromoCodes,
+  setPromoCodeActive,
+  setExchangeRate,
+  setDeveloperAccess,
   setInvoiceStatus,
   updatePlatformSettings,
 } from "@/lib/admin.functions";
@@ -53,16 +59,27 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-function AdminPage() {
+export function AdminPage() {
   const queryClient = useQueryClient();
   const fetchOverview = useServerFn(getAdminOverview);
   const fetchSettings = useServerFn(getPlatformSettings);
   const saveSettings = useServerFn(updatePlatformSettings);
   const addInvoice = useServerFn(createInvoice);
   const updateInvoice = useServerFn(setInvoiceStatus);
+  const fetchDeveloperSubscriptions = useServerFn(listDeveloperSubscriptions);
+  const fetchPromoCodes = useServerFn(listPromoCodes);
+  const addPromoCode = useServerFn(createPromoCode);
+  const togglePromoCode = useServerFn(setPromoCodeActive);
+  const saveExchangeRate = useServerFn(setExchangeRate);
+  const updateDeveloperAccess = useServerFn(setDeveloperAccess);
 
   const overview = useQuery({ queryKey: ["admin-overview"], queryFn: () => fetchOverview() });
   const settings = useQuery({ queryKey: ["platform-settings"], queryFn: () => fetchSettings() });
+  const developerSubscriptions = useQuery({
+    queryKey: ["developer-subscriptions"],
+    queryFn: () => fetchDeveloperSubscriptions(),
+  });
+  const promoCodes = useQuery({ queryKey: ["promo-codes"], queryFn: () => fetchPromoCodes() });
 
   const [form, setForm] = useState({
     platformName: "Zaka",
@@ -118,6 +135,33 @@ function AdminPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [promo, setPromo] = useState({ code: "", durationType: "trial_days" as "lifetime" | "monthly" | "yearly" | "trial_days", trialDays: 15, maxRedemptions: 100 });
+  const [rate, setRate] = useState({ currency: "USD", rateToHtg: 132 });
+  const promoMutation = useMutation({
+    mutationFn: () => addPromoCode({ data: promo }),
+    onSuccess: () => {
+      toast.success("Code promo créé");
+      setPromo({ ...promo, code: "" });
+      queryClient.invalidateQueries({ queryKey: ["promo-codes"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const promoStatusMutation = useMutation({
+    mutationFn: (data: { promoCodeId: string; active: boolean }) => togglePromoCode({ data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["promo-codes"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const rateMutation = useMutation({
+    mutationFn: () => saveExchangeRate({ data: rate }),
+    onSuccess: () => toast.success("Taux du jour enregistré"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const developerAccessMutation = useMutation({
+    mutationFn: (data: { subscriptionId: string; active: boolean }) => updateDeveloperAccess({ data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["developer-subscriptions"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (overview.isLoading) {
     return (
       <ConsoleShell>
@@ -151,6 +195,7 @@ function AdminPage() {
           { label: "Applications", value: totals.apps, icon: Building2 },
           { label: "Volume encaissé", value: formatHTG(totals.volume), icon: Wallet },
           { label: "Factures en attente", value: totals.pendingInvoices, icon: ReceiptText },
+          { label: "Revenus factures", value: formatHTG(totals.invoiceRevenue), icon: Wallet },
         ].map((kpi) => (
           <div key={kpi.label} className="card-elevated rounded-2xl border border-border bg-card p-5">
             <kpi.icon className="size-4 text-primary" />
@@ -165,6 +210,8 @@ function AdminPage() {
           <TabsTrigger value="settings">Paramètres globaux</TabsTrigger>
           <TabsTrigger value="developers">Développeurs</TabsTrigger>
           <TabsTrigger value="billing">Facturation SaaS</TabsTrigger>
+          <TabsTrigger value="access">Accès développeurs</TabsTrigger>
+          <TabsTrigger value="promos">Promos & taux</TabsTrigger>
         </TabsList>
 
         <TabsContent value="settings" className="mt-6">
@@ -367,6 +414,42 @@ function AdminPage() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="access" className="mt-6">
+          <div className="rounded-2xl border border-border bg-card">
+            <Table>
+              <TableHeader><TableRow><TableHead>Développeur</TableHead><TableHead>Plan</TableHead><TableHead>Montant</TableHead><TableHead>Statut</TableHead><TableHead>Expiration</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {(developerSubscriptions.data ?? []).map((subscription) => (
+                  <TableRow key={subscription.id}>
+                    <TableCell>{subscription.email}</TableCell>
+                    <TableCell>{subscription.plan}</TableCell>
+                    <TableCell>{formatHTG(Number(subscription.amount))}</TableCell>
+                    <TableCell><Badge variant={subscription.status === "expired" ? "destructive" : "default"}>{subscription.status}</Badge></TableCell>
+                    <TableCell>{subscription.expires_at ? formatDate(subscription.expires_at) : "À vie"}</TableCell>
+                    <TableCell><Button size="sm" variant="outline" onClick={() => developerAccessMutation.mutate({ subscriptionId: subscription.id, active: subscription.status === "cancelled" || subscription.status === "expired" })}>{subscription.status === "cancelled" || subscription.status === "expired" ? "Activer" : "Suspendre"}</Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="promos" className="mt-6 space-y-6">
+          <div className="grid gap-4 rounded-2xl border border-border bg-card p-6 sm:grid-cols-4">
+            <div className="space-y-2"><Label>Code</Label><Input value={promo.code} placeholder="OLIGENS15" onChange={(e) => setPromo({ ...promo, code: e.target.value.toUpperCase() })} /></div>
+            <div className="space-y-2"><Label>Durée</Label><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={promo.durationType} onChange={(e) => setPromo({ ...promo, durationType: e.target.value as typeof promo.durationType })}><option value="trial_days">Essai</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">À vie</option></select></div>
+            <div className="space-y-2"><Label>Jours d'essai</Label><Input type="number" value={promo.trialDays} disabled={promo.durationType !== "trial_days"} onChange={(e) => setPromo({ ...promo, trialDays: Number(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Utilisations max.</Label><Input type="number" value={promo.maxRedemptions} onChange={(e) => setPromo({ ...promo, maxRedemptions: Number(e.target.value) })} /></div>
+            <Button className="sm:col-span-4" disabled={!promo.code || promoMutation.isPending} onClick={() => promoMutation.mutate()}>Créer le code promo</Button>
+          </div>
+          <div className="grid max-w-xl gap-4 rounded-2xl border border-border bg-card p-6 sm:grid-cols-3">
+            <div className="space-y-2"><Label>Devise</Label><Input value={rate.currency} maxLength={3} onChange={(e) => setRate({ ...rate, currency: e.target.value.toUpperCase() })} /></div>
+            <div className="space-y-2"><Label>1 devise = HTG</Label><Input type="number" value={rate.rateToHtg} onChange={(e) => setRate({ ...rate, rateToHtg: Number(e.target.value) })} /></div>
+            <Button className="self-end" onClick={() => rateMutation.mutate()}>Enregistrer le taux</Button>
+          </div>
+          <div className="rounded-2xl border border-border bg-card"><Table><TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Durée</TableHead><TableHead>Utilisations</TableHead><TableHead>État</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader><TableBody>{(promoCodes.data ?? []).map((code) => <TableRow key={code.id}><TableCell className="font-mono">{code.code}</TableCell><TableCell>{code.duration_type}</TableCell><TableCell>{code.redemption_count}{code.max_redemptions ? ` / ${code.max_redemptions}` : ""}</TableCell><TableCell>{code.active ? "Actif" : "Désactivé"}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => promoStatusMutation.mutate({ promoCodeId: code.id, active: !code.active })}>{code.active ? "Désactiver" : "Activer"}</Button></TableCell></TableRow>)}</TableBody></Table></div>
         </TabsContent>
       </Tabs>
     </ConsoleShell>

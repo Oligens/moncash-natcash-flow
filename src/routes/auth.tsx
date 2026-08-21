@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn, signUp } from "@/lib/auth.functions";
@@ -83,6 +84,15 @@ function AuthPage() {
             {mode === "signin" ? "Se connecter" : "Créer le compte"}
           </Button>
         </form>
+
+        <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
+          <Separator className="flex-1" />
+          <span>ou</span>
+          <Separator className="flex-1" />
+        </div>
+        <Button asChild variant="outline" className="w-full">
+          <a href="/api/auth/google">Continuer avec Google</a>
+        </Button>
 
         <button
           type="button"
