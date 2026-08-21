@@ -20,9 +20,15 @@ chaque `createServerFn` appelle `requireUser()` / `requireAdmin()`
 | --- | --- |
 | `NEON_DATABASE_URL` | chaîne de connexion Neon (pooler, `sslmode=require`) |
 | `ZAKA_SESSION_SECRET` | clé HMAC de signature des cookies de session (64 caractères aléatoires) |
-| `ZAKA_ADMIN_PASSWORD` | mot de passe du déverrouillage secret de `/admin` |
+| `ADMIN_EMAIL` | email exact autorisé pour le déverrouillage secret |
+| `ADMIN_PASSWORD` | mot de passe du déverrouillage secret de `/admin-zaka-pro` |
+| `ZAKA_ADMIN_PASSWORD` | ancien nom accepté comme repli de `ADMIN_PASSWORD` |
 
 À définir pour les environnements *Production*, *Preview* et *Development*.
+
+Le raccourci `Ctrl+Alt+P` ouvre la fenêtre secrète depuis la console. L'utilisateur
+doit être connecté avec le même email et avoir `users.is_admin = true`; la validation
+réelle est effectuée côté serveur, jamais avec `sessionStorage` seul.
 
 ## 3. Déploiement
 

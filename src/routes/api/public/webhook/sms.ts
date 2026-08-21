@@ -30,16 +30,12 @@ export const Route = createFileRoute("/api/public/webhook/sms")({
         const apiKey = request.headers.get("x-api-key");
         if (!apiKey) return json({ error: "Clé API manquante (x-api-key)" }, 401);
 
+        const { requireActiveApiApp } = await import("@/lib/api-access");
+        const access = await requireActiveApiApp(apiKey);
+        if (!access.app) return json({ error: access.error }, access.status);
+        const app = access.app as AppConfig & { id: string };
         const { db } = await import("@/lib/db.server");
         const sql = db();
-
-        // La clé API identifie le développeur et donc l'application ciblée.
-        const apps = (await sql`
-          SELECT id, sender_whitelist, amount_regex, name_regex, reference_regex, strict_name_match
-          FROM apps WHERE api_key = ${apiKey} LIMIT 1
-        `) as AppConfig[];
-        const app = apps[0];
-        if (!app) return json({ error: "Clé API invalide" }, 401);
 
         // Toute requête authentifiée maintient le statut « en ligne » du relais.
         await sql`UPDATE apps SET relay_last_seen_at = now() WHERE id = ${app.id}`;

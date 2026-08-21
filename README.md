@@ -30,7 +30,7 @@ Crée une interface web moderne, réactive et élégante (Tailwind CSS, composan
 
 3. Paramètres de l'API :
 
-   - Une section affichant les clés API et les endpoints REST (URL du webhook SMS, URL de vérification de licence) pour que de nouvelles applications tierces puissent s'y brancher facilement.Configure le backend complet et la base de données (Supabase / Edge Functions) pour alimenter le système de paiement automatisé MonCash/Natcash :
+	- Une section affichant les clés API et les endpoints REST (URL du webhook SMS, URL de vérification de licence) pour que de nouvelles applications tierces puissent s'y brancher facilement. Le backend utilise Neon PostgreSQL et des routes serveur TanStack.
 
 
 
@@ -46,17 +46,17 @@ Crée une interface web moderne, réactive et élégante (Tailwind CSS, composan
 
 2. API REST Endpoints (Edge Functions / API Routes) :
 
-   - Endpoint `POST /api/webhook/sms` : Reçoit le SMS brut envoyé par le téléphone relais. Le script doit analyser (parser) le texte pour en extraire automatiquement le montant et le numéro de téléphone, chercher une correspondance dans `subscriptions` (où le montant et le statut sont 'pending'), valider le paiement, basculer le statut en 'active' et définir la date d'expiration.
+	- Endpoint `POST /api/webhook/sms` : Reçoit le SMS brut envoyé par le téléphone relais. Le script analyse le texte, rapproche le paiement dans `subscriptions`, puis active l'abonnement.
 
    - Endpoint `POST /api/v1/checkout/init` : Permet à une application connectée d'initier une demande de paiement en fournissant `app_id`, `user_id`, `amount`, `account_name` (statut initial : 'pending').
 
-   - Endpoint `GET /api/v1/license/verify` : Permet à n'app connectée de vérifier instantanément si un `user_id` possède un abonnement actif (`status: "active"`).
+	- Endpoint `GET /api/v1/license/verify` : Permet à une application connectée de vérifier instantanément si un `user_id` possède un abonnement actif (`status: "active"`).
 
 
 
 3. Sécurité :
 
-   - Validation par clé API (`x-api-key`) pour sécuriser les requêtes provenant des applications tierces et du téléphone relais SMS.
+	- Validation par clé API (`x-api-key`) pour sécuriser les requêtes provenant des applications tierces et du téléphone relais SMS.
 
 This project was built with [Lovable](https://lovable.dev).
 
@@ -80,3 +80,13 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Neon et Google OAuth
+
+Le serveur utilise directement Neon via `DATABASE_URL` et `@neondatabase/serverless`. Exécutez
+[`db/schema.sql`](db/schema.sql) dans la console SQL Neon avant le premier démarrage; le script
+est idempotent et ajoute aussi les plans, taux de change et identifiants Google nécessaires.
+
+Dans Google Cloud Console, ajoutez `BASE_URL/api/auth/google/callback` comme URI de redirection
+autorisée. Les variables requises sont `DATABASE_URL`, `BASE_URL`, `ZAKA_SESSION_SECRET`,
+`GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`.

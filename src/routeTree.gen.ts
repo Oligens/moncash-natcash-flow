@@ -9,29 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as PayRouteImport } from './routes/pay'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as PayRouteImport } from './routes/pay'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminZakaProRouteImport } from './routes/_authenticated/admin-zaka-pro'
+import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
 import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps.$appId'
+import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiPublicWebhookSmsRouteImport } from './routes/api/public/webhook/sms'
-import { Route as ApiPublicV1RelayPingRouteImport } from './routes/api/public/v1/relay/ping'
-import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
 import { Route as ApiPublicV1CheckoutInitRouteImport } from './routes/api/public/v1/checkout/init'
+import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
+import { Route as ApiPublicV1RelayPingRouteImport } from './routes/api/public/v1/relay/ping'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PayRoute = PayRouteImport.update({
-  id: '/pay',
-  path: '/pay',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -39,18 +41,30 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const PayRoute = PayRouteImport.update({
+  id: '/pay',
+  path: '/pay',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRelayRoute = AuthenticatedRelayRouteImport.update({
-  id: '/relay',
-  path: '/relay',
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminZakaProRoute =
+  AuthenticatedAdminZakaProRouteImport.update({
+    id: '/admin-zaka-pro',
+    path: '/admin-zaka-pro',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -58,14 +72,9 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
-  id: '/api-docs',
-  path: '/api-docs',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedRelayRoute = AuthenticatedRelayRouteImport.update({
+  id: '/relay',
+  path: '/relay',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
@@ -73,14 +82,24 @@ const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
   path: '/apps/$appId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
+  id: '/api/auth/google',
+  path: '/api/auth/google',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGoogleRoute,
+} as any)
 const ApiPublicWebhookSmsRoute = ApiPublicWebhookSmsRouteImport.update({
   id: '/api/public/webhook/sms',
   path: '/api/public/webhook/sms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicV1RelayPingRoute = ApiPublicV1RelayPingRouteImport.update({
-  id: '/api/public/v1/relay/ping',
-  path: '/api/public/v1/relay/ping',
+const ApiPublicV1CheckoutInitRoute = ApiPublicV1CheckoutInitRouteImport.update({
+  id: '/api/public/v1/checkout/init',
+  path: '/api/public/v1/checkout/init',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicV1LicenseVerifyRoute =
@@ -89,9 +108,9 @@ const ApiPublicV1LicenseVerifyRoute =
     path: '/api/public/v1/license/verify',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicV1CheckoutInitRoute = ApiPublicV1CheckoutInitRouteImport.update({
-  id: '/api/public/v1/checkout/init',
-  path: '/api/public/v1/checkout/init',
+const ApiPublicV1RelayPingRoute = ApiPublicV1RelayPingRouteImport.update({
+  id: '/api/public/v1/relay/ping',
+  path: '/api/public/v1/relay/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -101,10 +120,13 @@ export interface FileRoutesByFullPath {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -116,10 +138,13 @@ export interface FileRoutesByTo {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -133,10 +158,13 @@ export interface FileRoutesById {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/_authenticated/api-docs': typeof AuthenticatedApiDocsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/relay': typeof AuthenticatedRelayRoute
   '/_authenticated/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -150,10 +178,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/admin'
+    | '/admin-zaka-pro'
     | '/api-docs'
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -165,10 +196,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/admin'
+    | '/admin-zaka-pro'
     | '/api-docs'
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -181,10 +215,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-zaka-pro'
     | '/_authenticated/api-docs'
     | '/_authenticated/dashboard'
     | '/_authenticated/relay'
     | '/_authenticated/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -197,6 +234,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PayRoute: typeof PayRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiPublicWebhookSmsRoute: typeof ApiPublicWebhookSmsRoute
   ApiPublicV1CheckoutInitRoute: typeof ApiPublicV1CheckoutInitRoute
   ApiPublicV1LicenseVerifyRoute: typeof ApiPublicV1LicenseVerifyRoute
@@ -205,25 +243,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pay': {
-      id: '/pay'
-      path: '/pay'
-      fullPath: '/pay'
-      preLoaderRoute: typeof PayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -233,25 +257,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/relay': {
-      id: '/_authenticated/relay'
-      path: '/relay'
-      fullPath: '/relay'
-      preLoaderRoute: typeof AuthenticatedRelayRouteImport
+    '/pay': {
+      id: '/pay'
+      path: '/pay'
+      fullPath: '/pay'
+      preLoaderRoute: typeof PayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+    '/_authenticated/admin-zaka-pro': {
+      id: '/_authenticated/admin-zaka-pro'
+      path: '/admin-zaka-pro'
+      fullPath: '/admin-zaka-pro'
+      preLoaderRoute: typeof AuthenticatedAdminZakaProRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/api-docs': {
@@ -261,11 +299,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApiDocsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relay': {
+      id: '/_authenticated/relay'
+      path: '/relay'
+      fullPath: '/relay'
+      preLoaderRoute: typeof AuthenticatedRelayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/apps/$appId': {
@@ -275,25 +320,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppsAppIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/auth/google': {
+      id: '/api/auth/google'
+      path: '/api/auth/google'
+      fullPath: '/api/auth/google'
+      preLoaderRoute: typeof ApiAuthGoogleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof ApiAuthGoogleRoute
+    }
     '/api/public/webhook/sms': {
       id: '/api/public/webhook/sms'
       path: '/api/public/webhook/sms'
       fullPath: '/api/public/webhook/sms'
       preLoaderRoute: typeof ApiPublicWebhookSmsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/v1/relay/ping': {
-      id: '/api/public/v1/relay/ping'
-      path: '/api/public/v1/relay/ping'
-      fullPath: '/api/public/v1/relay/ping'
-      preLoaderRoute: typeof ApiPublicV1RelayPingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/v1/license/verify': {
-      id: '/api/public/v1/license/verify'
-      path: '/api/public/v1/license/verify'
-      fullPath: '/api/public/v1/license/verify'
-      preLoaderRoute: typeof ApiPublicV1LicenseVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/checkout/init': {
@@ -303,11 +348,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1CheckoutInitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/license/verify': {
+      id: '/api/public/v1/license/verify'
+      path: '/api/public/v1/license/verify'
+      fullPath: '/api/public/v1/license/verify'
+      preLoaderRoute: typeof ApiPublicV1LicenseVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/relay/ping': {
+      id: '/api/public/v1/relay/ping'
+      path: '/api/public/v1/relay/ping'
+      fullPath: '/api/public/v1/relay/ping'
+      preLoaderRoute: typeof ApiPublicV1RelayPingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminZakaProRoute: typeof AuthenticatedAdminZakaProRoute
   AuthenticatedApiDocsRoute: typeof AuthenticatedApiDocsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedRelayRoute: typeof AuthenticatedRelayRoute
@@ -316,6 +376,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminZakaProRoute: AuthenticatedAdminZakaProRoute,
   AuthenticatedApiDocsRoute: AuthenticatedApiDocsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedRelayRoute: AuthenticatedRelayRoute,
@@ -325,12 +386,25 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiAuthGoogleRouteChildren {
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+}
+
+const ApiAuthGoogleRouteChildren: ApiAuthGoogleRouteChildren = {
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+}
+
+const ApiAuthGoogleRouteWithChildren = ApiAuthGoogleRoute._addFileChildren(
+  ApiAuthGoogleRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   PayRoute: PayRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiPublicWebhookSmsRoute: ApiPublicWebhookSmsRoute,
   ApiPublicV1CheckoutInitRoute: ApiPublicV1CheckoutInitRoute,
   ApiPublicV1LicenseVerifyRoute: ApiPublicV1LicenseVerifyRoute,
@@ -339,3 +413,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
