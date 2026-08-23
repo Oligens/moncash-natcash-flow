@@ -7,14 +7,16 @@ const normalizePlanKey = (value: string) =>
 
 /**
  * Repairs legacy schemas where plan_key was accidentally globally unique.
+ * Existing duplicate rows are collapsed before the scoped unique index is created.
  * The business rule is UNIQUE(app_id, plan_key).
- * This is idempotent and runs only once per server instance.
  */
 let planSchemaReady: Promise<void> | null = null;
 async function ensurePlanSchema(sql: any) {
   if (!planSchemaReady) {
     planSchemaReady = (async () => {
+      // Remove the legacy global constraint first. This must never block a valid save.
       await sql`ALTER TABLE app_plans DROP CONSTRAINT IF EXISTS app_plans_plan_key_key`;
+
       const indexes = (await sql.query(
         `SELECT indexname, indexdef
            FROM pg_indexes
@@ -33,6 +35,20 @@ async function ensurePlanSchema(sql: any) {
           await sql.query(`DROP INDEX IF EXISTS "${safeName}"`);
         }
       }
+
+      // Older deployments may already contain duplicate keys inside one app.
+      // Keep the oldest row so the scoped unique index can always be created.
+      await sql`
+        DELETE FROM app_plans a
+        USING app_plans b
+        WHERE a.ctid <> b.ctid
+          AND a.app_id = b.app_id
+          AND LOWER(a.plan_key) = LOWER(b.plan_key)
+          AND (
+            a.created_at > b.created_at
+            OR (a.created_at = b.created_at AND a.id::text > b.id::text)
+          )
+      `;
 
       await sql`CREATE UNIQUE INDEX IF NOT EXISTS app_plans_app_id_plan_key_uq ON app_plans (app_id, plan_key)`;
     })().catch((error) => {
@@ -91,40 +107,21 @@ export const createAppPlan = createServerFn({ method: "POST" })
       [data.appId, planKey],
     )) as { id: string }[];
 
-    try {
-      if (existing.length > 0) {
-        const updated = await sql`
-          UPDATE app_plans SET plan_key=${planKey}, name=${data.name}, amount=${data.amount}, currency=${data.currency},
-            period=${data.period}, description=${data.description || null}, active=true, updated_at=now()
-          WHERE id=${existing[0].id} AND app_id=${data.appId}
-          RETURNING id, plan_key, name, amount::float8, currency, period, description, active`;
-        return updated[0];
-      }
-
-      const inserted = await sql`
-        INSERT INTO app_plans (app_id, plan_key, name, amount, currency, period, description, active)
-        VALUES (${data.appId}, ${planKey}, ${data.name}, ${data.amount}, ${data.currency}, ${data.period}, ${data.description || null}, true)
+    if (existing.length > 0) {
+      const updated = await sql`
+        UPDATE app_plans SET plan_key=${planKey}, name=${data.name}, amount=${data.amount}, currency=${data.currency},
+          period=${data.period}, description=${data.description || null}, active=true, updated_at=now()
+        WHERE id=${existing[0].id} AND app_id=${data.appId}
         RETURNING id, plan_key, name, amount::float8, currency, period, description, active`;
-      return inserted[0];
-    } catch (error: any) {
-      if (error?.code === "23505") {
-        const concurrent = (await sql.query(
-          `SELECT id FROM app_plans WHERE app_id = $1 AND LOWER(plan_key) = LOWER($2) LIMIT 1`,
-          [data.appId, planKey],
-        )) as { id: string }[];
-        if (concurrent.length > 0) {
-          const updated = await sql`
-            UPDATE app_plans SET name=${data.name}, amount=${data.amount}, currency=${data.currency},
-              period=${data.period}, description=${data.description || null}, active=true, updated_at=now()
-            WHERE id=${concurrent[0].id} AND app_id=${data.appId}
-            RETURNING id, plan_key, name, amount::float8, currency, period, description, active`;
-          if (updated[0]) return updated[0];
-        }
-        throw new Error("Cette clé de plan est déjà utilisée par cette application.");
-      }
-      console.error("[createAppPlan] Erreur:", error);
-      throw new Error("Impossible d'enregistrer ce plan. Vérifiez les paramètres du plan et réessayez.");
+      return updated[0];
     }
+
+    // Direct insert: valid data is accepted without a broad catch that masks the real error.
+    const inserted = await sql`
+      INSERT INTO app_plans (app_id, plan_key, name, amount, currency, period, description, active)
+      VALUES (${data.appId}, ${planKey}, ${data.name}, ${data.amount}, ${data.currency}, ${data.period}, ${data.description || null}, true)
+      RETURNING id, plan_key, name, amount::float8, currency, period, description, active`;
+    return inserted[0];
   });
 
 export const updateAppPlan = createServerFn({ method: "POST" })
