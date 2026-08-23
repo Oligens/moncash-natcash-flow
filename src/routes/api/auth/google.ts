@@ -2,27 +2,28 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const STATE_COOKIE = "zaka_google_state";
 const stateAge = 10 * 60;
+const DEFAULT_GOOGLE_REDIRECT_URI = "https://zakaproht.vercel.app/api/auth/google/callback";
 
 function redirect(url: string) {
   return new Response(null, { status: 302, headers: { Location: url } });
 }
 
-function getBaseUrl(request: Request) {
-  return process.env["BASE_URL"]?.replace(/\/$/, "") ?? new URL(request.url).origin;
+function getGoogleRedirectUri() {
+  return process.env["GOOGLE_REDIRECT_URI"]?.trim() || DEFAULT_GOOGLE_REDIRECT_URI;
 }
 
 export const Route = createFileRoute("/api/auth/google")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: async () => {
         const clientId = process.env["GOOGLE_CLIENT_ID"];
         if (!clientId) return new Response("GOOGLE_CLIENT_ID manquant", { status: 500 });
 
         const state = crypto.randomUUID();
-        const callback = `${getBaseUrl(request)}/api/auth/google/callback`;
+        const redirectUri = getGoogleRedirectUri();
         const params = new URLSearchParams({
           client_id: clientId,
-          redirect_uri: callback,
+          redirect_uri: redirectUri,
           response_type: "code",
           scope: "openid email profile",
           state,
