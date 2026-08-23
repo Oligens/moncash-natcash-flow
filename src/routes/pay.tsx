@@ -9,71 +9,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { resolveAppByApiKey } from "@/lib/checkout.functions";
 import { useState, useEffect } from "react";
 
-// Schema de validation flexible et robuste pour les paramètres de requête
 const searchSchema = z.object({
-  // Accepte apikey, api_key, key pour plus de flexibilité
   apikey: z.string().trim().min(1).max(120).optional(),
   api_key: z.string().trim().min(1).max(120).optional(),
   key: z.string().trim().min(1).max(120).optional(),
-  // Plan flexible avec normalisation
-  plan: z.string().trim().toLowerCase().optional(),
+  plan: z.string().trim().min(1).max(80).optional(),
   user_id: z.string().trim().max(80).optional(),
 });
 
-// Type dérivé du schema
 type SearchParams = z.infer<typeof searchSchema>;
 
-// Fonction de normalisation des paramètres
 function normalizeSearchParams(search: unknown): SearchParams {
-  try {
-    const parsed = searchSchema.parse(search || {});
-    // Priorité: apikey > api_key > key
-    const apiKey = parsed.apikey || parsed.api_key || parsed.key;
-    // Normalisation du plan
-    const rawPlan = parsed.plan || "";
-    let normalizedPlan: "mensuel" | "annuel" | "monthly" | "yearly" | undefined;
-    if (rawPlan) {
-      const p = rawPlan.toLowerCase();
-      if (["mensuel", "monthly"].includes(p)) normalizedPlan = "monthly";
-      else if (["annuel", "yearly"].includes(p)) normalizedPlan = "yearly";
-    }
-    return {
-      apikey: apiKey,
-      api_key: apiKey,
-      key: apiKey,
-      plan: normalizedPlan,
-      user_id: parsed.user_id,
-    };
-  } catch (error) {
-    console.error("[PayPage] Erreur de validation des paramètres:", error);
-    return { apikey: undefined, api_key: undefined, key: undefined, plan: undefined, user_id: undefined };
+  const parsed = searchSchema.safeParse(search || {});
+  if (!parsed.success) {
+    console.error("[PayPage] Erreur de validation des paramètres:", parsed.error);
+    return {};
   }
+  const apiKey = parsed.data.apikey || parsed.data.api_key || parsed.data.key;
+  return {
+    apikey: apiKey,
+    api_key: apiKey,
+    key: apiKey,
+    plan: parsed.data.plan?.trim().toLowerCase(),
+    user_id: parsed.data.user_id,
+  };
 }
 
 export const Route = createFileRoute("/pay")({
-  validateSearch: (search) => {
-    try {
-      return normalizeSearchParams(search);
-    } catch (error) {
-      console.error("[PayPage] validateSearch error:", error);
-      return { apikey: undefined, api_key: undefined, key: undefined, plan: undefined, user_id: undefined };
-    }
-  },
+  validateSearch: normalizeSearchParams,
   head: () => ({
     meta: [
       { title: "Paiement sécurisé Zaka — MonCash & Natcash" },
-      {
-        name: "description",
-        content:
-          "Page de paiement hébergée par Zaka : choisissez votre plan Pro et payez en gourdes via MonCash ou Natcash.",
-      },
-      { property: "og:title", content: "Paiement sécurisé Zaka" },
-      {
-        property: "og:description",
-        content: "Tunnel de paiement Pro hébergé, activation automatique après confirmation SMS.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "description", content: "Page de paiement hébergée par Zaka avec plans personnalisés." },
     ],
   }),
   component: PayPage,
@@ -81,63 +48,44 @@ export const Route = createFileRoute("/pay")({
 
 function PayPage() {
   const search = Route.useSearch();
-  // Récupération flexible de l'apiKey
   const apiKey = search.apikey || search.api_key || search.key;
   const userId = search.user_id;
-  const rawPlan = search.plan;
-  
-  const defaultPlan = rawPlan === "yearly" ? "yearly" : "monthly";
+  const planKey = search.plan;
   const resolve = useServerFn(resolveAppByApiKey);
-  
-  // État local pour gérer les erreurs de manière isolée
   const [localError, setLocalError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["pay-app", apiKey],
     queryFn: async () => {
+      if (!apiKey) throw new Error("Clé API manquante");
       try {
-        if (!apiKey) {
-          throw new Error("Clé API manquante");
-        }
         const result = await resolve({ data: { apiKey } });
         setHasLoaded(true);
         return result;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Erreur lors de la vérification de la clé API";
-        console.error("[PayPage] Query error:", err);
-        setLocalError(errorMessage);
+        const message = err instanceof Error ? err.message : "Erreur lors de la vérification de la clé API";
+        setLocalError(message);
         setHasLoaded(true);
         return null;
       }
     },
     enabled: Boolean(apiKey),
-    retry: false, // Ne pas réessayer automatiquement en cas d'échec
+    retry: false,
   });
 
-  // Effet pour logger les erreurs côté client
   useEffect(() => {
-    if (error) {
-      console.error("[PayPage] React Query error:", error);
-    }
+    if (error) console.error("[PayPage] React Query error:", error);
   }, [error]);
 
-  // Rendu d'erreur globale si nécessaire
   if (!apiKey && hasLoaded) {
     return (
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 px-6 py-16 text-center">
         <ZakaLogo markClassName="size-10" />
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/10 p-6">
           <AlertTriangle className="size-10 text-destructive" />
-          <div>
-            <h1 className="font-display text-xl font-bold text-foreground">Lien invalide</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              La clé API du développeur est manquante ou invalide dans l'URL.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Exemple d'URL correcte : <code className="bg-muted px-2 py-1 rounded">/pay?apikey=sk_live_...&amp;plan=monthly</code>
-            </p>
-          </div>
+          <h1 className="font-display text-xl font-bold">Lien invalide</h1>
+          <p className="text-sm text-muted-foreground">La clé API du développeur est manquante ou invalide.</p>
         </div>
       </main>
     );
@@ -157,21 +105,10 @@ function PayPage() {
     return (
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 px-6 py-16 text-center">
         <ZakaLogo markClassName="size-10" />
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/10 p-6">
-          <AlertTriangle className="size-10 text-destructive" />
-          <div>
-            <h1 className="font-display text-xl font-bold text-foreground">
-              {localError?.includes("manquante") ? "Clé API manquante" : "Clé API invalide"}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {localError || "Cette clé API n'est pas reconnue. Contactez l'éditeur de l'application."}
-            </p>
-            {localError && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Détails techniques (console): voir les logs navigateur
-              </p>
-            )}
-          </div>
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6">
+          <AlertTriangle className="mx-auto mb-3 size-10 text-destructive" />
+          <h1 className="font-display text-xl font-bold">Clé API invalide</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{localError || "Cette clé API n'est pas reconnue."}</p>
         </div>
       </main>
     );
@@ -180,17 +117,14 @@ function PayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 px-6 py-16 text-center">
       <ZakaLogo markClassName="size-10" />
-      <>
-        <h1 className="font-display text-3xl font-bold">Passer en Pro sur {data.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          Paiement en gourdes via MonCash ou Natcash. Votre accès Pro est activé automatiquement
-          dès la confirmation du transfert.
-        </p>
-        <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} defaultPlan={defaultPlan} />
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="size-4 text-primary" /> Paiement hébergé et sécurisé par Zaka
-        </p>
-      </>
+      <h1 className="font-display text-3xl font-bold">Paiement sur {data.name}</h1>
+      <p className="text-sm text-muted-foreground">
+        {planKey ? `Plan sélectionné : ${planKey}` : "Sélectionnez votre plan."} Paiement via MonCash ou Natcash.
+      </p>
+      <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} defaultPlan={planKey} />
+      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <ShieldCheck className="size-4 text-primary" /> Paiement hébergé et sécurisé par Zaka
+      </p>
     </main>
   );
 }
