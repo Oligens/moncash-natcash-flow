@@ -11,13 +11,12 @@ export const Route = createFileRoute("/api/public/v1/relay/ping")({
         const apiKey = request.headers.get("x-api-key");
         if (!apiKey) return json({ error: "Clé API manquante (x-api-key)" }, 401);
 
+        const { requireActiveApiApp } = await import("@/lib/api-access");
+        const access = await requireActiveApiApp(apiKey);
+        if (!access.app) return json({ error: access.error }, access.status);
+        const app = access.app;
         const { db } = await import("@/lib/db.server");
         const sql = db();
-        const apps = (await sql`
-          SELECT id, name, sender_whitelist FROM apps WHERE api_key = ${apiKey} LIMIT 1
-        `) as { id: string; name: string; sender_whitelist: string[] | null }[];
-        const app = apps[0];
-        if (!app) return json({ error: "Clé API invalide" }, 401);
 
         await sql`UPDATE apps SET relay_last_seen_at = now() WHERE id = ${app.id}`;
 

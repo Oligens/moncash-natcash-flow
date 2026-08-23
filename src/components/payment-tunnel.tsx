@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Info, Loader2, QrCode, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,10 +22,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PLANS, PROVIDERS, formatHTG, type PlanType, type Provider } from "@/lib/plans";
-import { getCheckoutStatus, initDemoCheckout, getAppPlans } from "@/lib/checkout.functions";
+import { PROVIDERS, formatHTG, type Provider } from "@/lib/plans";
+import {
+  getCheckoutStatus,
+  initDemoCheckout,
+  listPublicPlans,
+  type PublicPlan,
+} from "@/lib/checkout.functions";
 
-type Props = { appId: string; userId?: string; triggerLabel?: string; defaultPlan?: PlanType };
+type Props = {
+  appId: string;
+  userId?: string;
+  triggerLabel?: string;
+  plans?: PublicPlan[];
+  requestedPlan?: string;
+};
 
 const STEPS = ["Abonnement", "Paiement", "Confirmation"];
 
@@ -32,11 +44,20 @@ export function PaymentTunnel({
   appId,
   userId = "demo_user",
   triggerLabel = "Passer au plan Pro",
-  defaultPlan = "monthly",
+  plans: providedPlans,
+  requestedPlan,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [plan, setPlan] = useState<PlanType>(defaultPlan);
+  const getPlans = useServerFn(listPublicPlans);
+  const { data: fetchedPlans = [] } = useQuery({
+    queryKey: ["pay-plans", appId],
+    queryFn: () => getPlans({ data: { appId } }),
+    enabled: !providedPlans,
+  });
+  const plans = providedPlans ?? fetchedPlans;
+  const selectedPlan = plans.find((item) => item.plan_key === requestedPlan) ?? plans[0];
+  const [planId, setPlanId] = useState(selectedPlan?.id ?? "");
   const [provider, setProvider] = useState<Provider>("moncash");
   const [accountName, setAccountName] = useState("");
   const [phone, setPhone] = useState("");
@@ -44,21 +65,13 @@ export function PaymentTunnel({
   const [submitting, setSubmitting] = useState(false);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("pending");
-  const [customPlanKey, setCustomPlanKey] = useState<string | null>(null);
 
   const init = useServerFn(initDemoCheckout);
   const check = useServerFn(getCheckoutStatus);
-  const fetchPlans = useServerFn(getAppPlans);
 
-  // Récupérer les plans personnalisés de l'application
-  const { data: customPlans } = useQuery({
-    queryKey: ["app-plans", appId],
-    queryFn: () => fetchPlans({ data: { appId } }),
-    enabled: open, // Ne charger que lorsque le dialog est ouvert
-    retry: false,
-  });
-
-  const hasCustomPlans = customPlans && customPlans.length > 0;
+  useEffect(() => {
+    if (!planId && selectedPlan) setPlanId(selectedPlan.id);
+  }, [planId, selectedPlan]);
 
   useEffect(() => {
     if (!subscriptionId || status === "active") return;
@@ -98,8 +111,7 @@ export function PaymentTunnel({
           accountName: trimmed,
           userPhone: phone.trim(),
           provider,
-          planType: plan,
-          customPlanKey: customPlanKey ?? undefined,
+          planId,
         },
       });
       setSubscriptionId(res.subscriptionId);
@@ -111,7 +123,7 @@ export function PaymentTunnel({
     }
   }
 
-  const activePlan = PLANS[plan];
+  const activePlan = plans.find((item) => item.id === planId) ?? selectedPlan;
   const activeProvider = PROVIDERS[provider];
 
   return (
@@ -170,80 +182,28 @@ export function PaymentTunnel({
 
         {step === 1 && (
           <div className="space-y-3">
-            {/* Afficher les plans personnalisés s'ils existent */}
-            {hasCustomPlans ? (
-              <>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Choisissez votre abonnement pour {customPlans[0]?.label && "découvrir nos offres"}:
+            {plans.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPlanId(p.id)}
+                className={cn(
+                  "w-full rounded-xl border p-4 text-left transition-colors",
+                  planId === p.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-primary/50",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-base font-semibold">{p.name}</span>
+                </div>
+                <div className="mt-1 text-2xl font-bold text-primary">{p.amount_htg == null ? "Taux indisponible" : formatHTG(p.amount_htg)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {p.amount} {p.currency} · {p.period} · {p.description ?? ""}
                 </p>
-                {customPlans.map((customPlan) => (
-                  <button
-                    key={customPlan.id}
-                    type="button"
-                    onClick={() => {
-                      setCustomPlanKey(customPlan.id);
-                      // Pour les plans personnalisés, on garde monthly/yearly comme fallback
-                      if (!plan) setPlan("monthly");
-                    }}
-                    className={cn(
-                      "w-full rounded-xl border p-4 text-left transition-colors",
-                      customPlanKey === customPlan.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-card hover:border-primary/50",
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-display text-base font-semibold">{customPlan.label}</span>
-                      {customPlan.badge && <Badge variant="secondary">{customPlan.badge}</Badge>}
-                    </div>
-                    <div className="mt-1 space-y-1">
-                      {customPlan.currency !== "HTG" && (
-                        <div className="text-xs text-muted-foreground">
-                          {formatCurrency(customPlan.originalAmount, customPlan.currency)} 
-                          {" → "}
-                        </div>
-                      )}
-                      <div className="text-2xl font-bold text-primary">
-                        {formatHTG(customPlan.htgAmount)}
-                      </div>
-                    </div>
-                    {customPlan.description && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {customPlan.description}
-                      </p>
-                    )}
-                  </button>
-                ))}
-              </>
-            ) : (
-              /* Plans par défaut Zaka Pro */
-              Object.values(PLANS).map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setCustomPlanKey(null);
-                    setPlan(p.id);
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-colors",
-                    plan === p.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-card hover:border-primary/50",
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-base font-semibold">{p.label}</span>
-                    {p.badge && <Badge variant="secondary">{p.badge}</Badge>}
-                  </div>
-                  <div className="mt-1 text-2xl font-bold text-primary">{formatHTG(p.amount)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {p.period} · {p.hint}
-                  </p>
-                </button>
-              ))
-            )}
-            <Button className="w-full" onClick={() => setStep(2)}>
+              </button>
+            ))}
+            <Button className="w-full" onClick={() => setStep(2)} disabled={!activePlan || activePlan.amount_htg == null}>
               Continuer
             </Button>
           </div>
@@ -328,7 +288,7 @@ export function PaymentTunnel({
               </Button>
               <Button className="flex-1" onClick={submit} disabled={submitting}>
                 {submitting && <Loader2 className="size-4 animate-spin" />}
-                Payer {formatHTG(activePlan.amount)}
+                Payer {activePlan ? formatHTG(activePlan.amount_htg ?? 0) : ""}
               </Button>
             </div>
           </div>
@@ -345,7 +305,7 @@ export function PaymentTunnel({
                 <div className="space-y-1 text-sm">
                   <div className="text-muted-foreground">Montant exact à envoyer</div>
                   <div className="text-2xl font-bold text-primary">
-                    {formatHTG(activePlan.amount)}
+                    {formatHTG(activePlan?.amount_htg ?? 0)}
                   </div>
                   <div className="text-muted-foreground">Numéro marchand</div>
                   <div className="font-mono text-base">{activeProvider.number}</div>

@@ -15,10 +15,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PayRouteImport } from './routes/pay'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminZakaProRouteImport } from './routes/_authenticated/admin-zaka-pro'
 import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticated/api-docs'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
 import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps.$appId'
+import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiPublicWebhookSmsRouteImport } from './routes/api/public/webhook/sms'
 import { Route as ApiPublicV1CheckoutInitRouteImport } from './routes/api/public/v1/checkout/init'
 import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
@@ -53,6 +56,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminZakaProRoute =
+  AuthenticatedAdminZakaProRouteImport.update({
+    id: '/admin-zaka-pro',
+    path: '/admin-zaka-pro',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedApiDocsRoute = AuthenticatedApiDocsRouteImport.update({
   id: '/api-docs',
   path: '/api-docs',
@@ -72,6 +81,16 @@ const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
   id: '/apps/$appId',
   path: '/apps/$appId',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
+  id: '/api/auth/google',
+  path: '/api/auth/google',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGoogleRoute,
 } as any)
 const ApiPublicWebhookSmsRoute = ApiPublicWebhookSmsRouteImport.update({
   id: '/api/public/webhook/sms',
@@ -101,10 +120,13 @@ export interface FileRoutesByFullPath {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -116,10 +138,13 @@ export interface FileRoutesByTo {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/api-docs': typeof AuthenticatedApiDocsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -133,10 +158,13 @@ export interface FileRoutesById {
   '/pay': typeof PayRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-zaka-pro': typeof AuthenticatedAdminZakaProRoute
   '/_authenticated/api-docs': typeof AuthenticatedApiDocsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/relay': typeof AuthenticatedRelayRoute
   '/_authenticated/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -150,10 +178,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/admin'
+    | '/admin-zaka-pro'
     | '/api-docs'
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -165,10 +196,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/admin'
+    | '/admin-zaka-pro'
     | '/api-docs'
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -181,10 +215,13 @@ export interface FileRouteTypes {
     | '/pay'
     | '/sitemap.xml'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-zaka-pro'
     | '/_authenticated/api-docs'
     | '/_authenticated/dashboard'
     | '/_authenticated/relay'
     | '/_authenticated/apps/$appId'
+    | '/api/auth/google'
+    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -197,6 +234,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PayRoute: typeof PayRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiPublicWebhookSmsRoute: typeof ApiPublicWebhookSmsRoute
   ApiPublicV1CheckoutInitRoute: typeof ApiPublicV1CheckoutInitRoute
   ApiPublicV1LicenseVerifyRoute: typeof ApiPublicV1LicenseVerifyRoute
@@ -247,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-zaka-pro': {
+      id: '/_authenticated/admin-zaka-pro'
+      path: '/admin-zaka-pro'
+      fullPath: '/admin-zaka-pro'
+      preLoaderRoute: typeof AuthenticatedAdminZakaProRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/api-docs': {
       id: '/_authenticated/api-docs'
       path: '/api-docs'
@@ -274,6 +319,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/apps/$appId'
       preLoaderRoute: typeof AuthenticatedAppsAppIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/auth/google': {
+      id: '/api/auth/google'
+      path: '/api/auth/google'
+      fullPath: '/api/auth/google'
+      preLoaderRoute: typeof ApiAuthGoogleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof ApiAuthGoogleRoute
     }
     '/api/public/webhook/sms': {
       id: '/api/public/webhook/sms'
@@ -308,6 +367,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminZakaProRoute: typeof AuthenticatedAdminZakaProRoute
   AuthenticatedApiDocsRoute: typeof AuthenticatedApiDocsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedRelayRoute: typeof AuthenticatedRelayRoute
@@ -316,6 +376,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminZakaProRoute: AuthenticatedAdminZakaProRoute,
   AuthenticatedApiDocsRoute: AuthenticatedApiDocsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedRelayRoute: AuthenticatedRelayRoute,
@@ -325,12 +386,25 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiAuthGoogleRouteChildren {
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+}
+
+const ApiAuthGoogleRouteChildren: ApiAuthGoogleRouteChildren = {
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+}
+
+const ApiAuthGoogleRouteWithChildren = ApiAuthGoogleRoute._addFileChildren(
+  ApiAuthGoogleRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   PayRoute: PayRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiPublicWebhookSmsRoute: ApiPublicWebhookSmsRoute,
   ApiPublicV1CheckoutInitRoute: ApiPublicV1CheckoutInitRoute,
   ApiPublicV1LicenseVerifyRoute: ApiPublicV1LicenseVerifyRoute,

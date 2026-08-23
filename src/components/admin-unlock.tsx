@@ -20,6 +20,7 @@ export function AdminUnlock() {
   const navigate = useNavigate();
   const unlock = useServerFn(unlockAdminAccess);
   const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -40,17 +41,19 @@ export function AdminUnlock() {
     setPending(true);
     setError("");
     try {
-      const result = await unlock({ data: { password } });
+      const result = await unlock({ data: { email, password } });
       if (!result.ok) {
-        setError("Accès refusé.");
+        // Afficher le message d'erreur spécifique si disponible
+        setError((result as any)?.error || "Accès refusé.");
         return;
       }
       setAdminUnlocked(true);
       setOpen(false);
       setPassword("");
-      await navigate({ to: "/admin" });
-    } catch {
-      setError("Accès refusé.");
+      await navigate({ to: "/admin-zaka-pro" });
+    } catch (err) {
+      console.error("[ADMIN] Erreur lors du déverrouillage:", err);
+      setError("Erreur de connexion. Réessayez.");
     } finally {
       setPending(false);
     }
@@ -62,6 +65,7 @@ export function AdminUnlock() {
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) {
+          setEmail("");
           setPassword("");
           setError("");
         }
@@ -78,18 +82,28 @@ export function AdminUnlock() {
         </DialogHeader>
         <form className="space-y-4" onSubmit={submit}>
           <div className="space-y-2">
+            <Label htmlFor="admin-email">Email administrateur</Label>
+            <Input
+              id="admin-email"
+              type="email"
+              autoComplete="username"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="admin-password">Mot de passe administrateur</Label>
             <Input
               id="admin-password"
               type="password"
               autoComplete="off"
-              autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={pending || password.length === 0}>
+          <Button type="submit" className="w-full" disabled={pending || password.length === 0 || email.length === 0}>
             {pending ? "Vérification…" : "Déverrouiller"}
           </Button>
         </form>

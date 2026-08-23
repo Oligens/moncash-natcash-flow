@@ -13,13 +13,12 @@ export const Route = createFileRoute("/api/public/v1/license/verify")({
         const userId = new URL(request.url).searchParams.get("user_id");
         if (!userId) return json({ error: "Paramètre user_id requis" }, 400);
 
+        const { requireActiveApiApp } = await import("@/lib/api-access");
+        const access = await requireActiveApiApp(apiKey);
+        if (!access.app) return json({ error: access.error }, access.status);
+        const app = access.app;
         const { db } = await import("@/lib/db.server");
         const sql = db();
-        const apps = (await sql`SELECT id FROM apps WHERE api_key = ${apiKey} LIMIT 1`) as {
-          id: string;
-        }[];
-        const app = apps[0];
-        if (!app) return json({ error: "Clé API invalide" }, 401);
 
         const rows = (await sql`
           SELECT id, status, plan_type, expires_at FROM subscriptions
