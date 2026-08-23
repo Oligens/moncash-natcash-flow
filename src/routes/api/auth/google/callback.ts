@@ -3,6 +3,7 @@ import { createSession } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
 
 const STATE_COOKIE = "zaka_google_state";
+const DEFAULT_GOOGLE_REDIRECT_URI = "https://zakaproht.vercel.app/api/auth/google/callback";
 
 function getCookie(request: Request, name: string) {
   return request.headers.get("cookie")?.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1) ?? null;
@@ -15,8 +16,8 @@ function safeEqual(left: string, right: string) {
   return result === 0;
 }
 
-function getBaseUrl(request: Request) {
-  return process.env["BASE_URL"]?.replace(/\/$/, "") ?? new URL(request.url).origin;
+function getGoogleRedirectUri() {
+  return process.env["GOOGLE_REDIRECT_URI"]?.trim() || DEFAULT_GOOGLE_REDIRECT_URI;
 }
 
 export const Route = createFileRoute("/api/auth/google/callback")({
@@ -27,7 +28,9 @@ export const Route = createFileRoute("/api/auth/google/callback")({
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
         const savedState = getCookie(request, STATE_COOKIE);
-        const failure = `${getBaseUrl(request)}/auth?oauth_error=google`;
+        const redirectUri = getGoogleRedirectUri();
+        const appOrigin = new URL(redirectUri).origin;
+        const failure = `${appOrigin}/auth?oauth_error=google`;
         if (!code || !state || !savedState || !safeEqual(state, savedState)) return Response.redirect(failure, 302);
 
         const clientId = process.env["GOOGLE_CLIENT_ID"];
@@ -41,7 +44,7 @@ export const Route = createFileRoute("/api/auth/google/callback")({
             code,
             client_id: clientId,
             client_secret: clientSecret,
-            redirect_uri: `${getBaseUrl(request)}/api/auth/google/callback`,
+            redirect_uri: redirectUri,
             grant_type: "authorization_code",
           }),
         });
@@ -81,7 +84,7 @@ export const Route = createFileRoute("/api/auth/google/callback")({
         return new Response(null, {
           status: 302,
           headers: {
-            Location: `${getBaseUrl(request)}/dashboard`,
+            Location: `${appOrigin}/dashboard`,
           },
         });
       },
