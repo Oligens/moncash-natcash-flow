@@ -43,15 +43,17 @@ export function AdminUnlock() {
     try {
       const result = await unlock({ data: { email, password } });
       if (!result.ok) {
-        setError("Accès refusé.");
+        // Afficher le message d'erreur spécifique si disponible
+        setError((result as any)?.error || "Accès refusé.");
         return;
       }
       setAdminUnlocked(true);
       setOpen(false);
       setPassword("");
       await navigate({ to: "/admin-zaka-pro" });
-    } catch {
-      setError("Accès refusé.");
+    } catch (err) {
+      console.error("[ADMIN] Erreur lors du déverrouillage:", err);
+      setError("Erreur de connexion. Réessayez.");
     } finally {
       setPending(false);
     }

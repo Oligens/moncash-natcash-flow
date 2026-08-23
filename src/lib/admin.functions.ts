@@ -15,15 +15,50 @@ export const unlockAdminAccess = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("./auth.server");
     const expectedEmail = (process.env["ADMIN_EMAIL"] ?? "").trim().toLowerCase();
     const expectedPassword = process.env["ADMIN_PASSWORD"] ?? process.env["ZAKA_ADMIN_PASSWORD"];
-    if (!expectedEmail || !expectedPassword) throw new Error("Accès administrateur non configuré");
+    
+    // Vérifier que les variables d'environnement sont configurées
+    if (!expectedEmail || !expectedPassword) {
+      console.error("[ADMIN] Variables d'environnement manquantes:", {
+        hasEmail: !!expectedEmail,
+        hasPassword: !!expectedPassword,
+      });
+      return { ok: false as const, error: "Configuration admin manquante" };
+    }
 
     const { createHash, timingSafeEqual } = await import("node:crypto");
     const a = createHash("sha256").update(data.password, "utf8").digest();
     const b = createHash("sha256").update(expectedPassword, "utf8").digest();
-    if (data.email.toLowerCase() !== expectedEmail || !timingSafeEqual(a, b)) return { ok: false as const };
+    
+    // Comparaison sécurisée email + mot de passe
+    const emailMatch = data.email.toLowerCase() === expectedEmail;
+    const passwordMatch = timingSafeEqual(a, b);
+    
+    if (!emailMatch || !passwordMatch) {
+      console.warn("[ADMIN] Échec authentification:", { 
+        emailMatch, 
+        passwordMatch,
+        providedEmail: data.email.toLowerCase(),
+        expectedEmail 
+      });
+      return { ok: false as const };
+    }
 
+    // Vérifier que l'utilisateur connecté existe et est admin
     const user = await getSessionUser();
-    if (!user?.isAdmin || user.email.toLowerCase() !== expectedEmail) return { ok: false as const };
+    if (!user) {
+      console.warn("[ADMIN] Utilisateur non connecté");
+      return { ok: false as const, error: "Session invalide" };
+    }
+    if (!user.isAdmin) {
+      console.warn("[ADMIN] Utilisateur non admin:", user.email);
+      return { ok: false as const, error: "Rôle admin requis" };
+    }
+    if (user.email.toLowerCase() !== expectedEmail) {
+      console.warn("[ADMIN] Email utilisateur ≠ email admin:", { user: user.email, admin: expectedEmail });
+      return { ok: false as const, error: "Email non autorisé" };
+    }
+    
+    console.log("[ADMIN] Accès accordé à:", user.email);
     return { ok: true as const };
   });
 
