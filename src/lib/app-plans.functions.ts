@@ -3,6 +3,9 @@ import { z } from "zod";
 
 const appIdSchema = z.object({ appId: z.string().uuid() });
 
+const normalizePlanKey = (value: string) =>
+  value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+
 /** Récupère tous les plans personnalisés d'une application */
 export const getAppPlans = createServerFn({ method: "GET" })
   .inputValidator((input) => appIdSchema.parse(input))
@@ -12,7 +15,6 @@ export const getAppPlans = createServerFn({ method: "GET" })
     const user = await requireUser();
     const sql = db();
 
-    // Vérifier que l'app appartient à l'utilisateur
     const appCheck = (await sql.query(
       `SELECT id FROM apps WHERE id = $1 AND owner_id = $2`,
       [data.appId, user.id],
@@ -24,14 +26,14 @@ export const getAppPlans = createServerFn({ method: "GET" })
 
     const plans = (await sql.query(
       `SELECT id, plan_key, name, amount::float8, currency, period, description, active, created_at
-       FROM app_plans 
-       WHERE app_id = $1 
-       ORDER BY 
-         CASE period 
-           WHEN 'trial' THEN 1 
-           WHEN 'monthly' THEN 2 
-           WHEN 'yearly' THEN 3 
-           ELSE 4 
+       FROM app_plans
+       WHERE app_id = $1
+       ORDER BY
+         CASE period
+           WHEN 'trial' THEN 1
+           WHEN 'monthly' THEN 2
+           WHEN 'yearly' THEN 3
+           ELSE 4
          END,
          created_at ASC`,
       [data.appId],
@@ -50,7 +52,14 @@ export const getAppPlans = createServerFn({ method: "GET" })
     return plans;
   });
 
-/** Crée un nouveau plan personnalisé */
+/**
+ * Crée ou met à jour un plan personnalisé.
+ *
+ * On ne dépend pas d'un nom précis de contrainte SQL pour l'upsert :
+ * on recherche d'abord le plan dans l'application, puis on UPDATE ou INSERT.
+ * Cela reste compatible avec les schémas existants qui n'ont pas exactement
+ * la même contrainte UNIQUE.
+ */
 export const createAppPlan = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z.object({
@@ -68,8 +77,12 @@ export const createAppPlan = createServerFn({ method: "POST" })
     const { requireUser } = await import("./auth.server");
     const user = await requireUser();
     const sql = db();
+    const planKey = normalizePlanKey(data.planKey);
 
-    // Vérifier que l'app appartient à l'utilisateur
+    if (planKey.length < 3) {
+      throw new Error("La clé du plan doit contenir au moins 3 caractères valides.");
+    }
+
     const appCheck = (await sql.query(
       `SELECT id FROM apps WHERE id = $1 AND owner_id = $2`,
       [data.appId, user.id],
@@ -79,18 +92,42 @@ export const createAppPlan = createServerFn({ method: "POST" })
       throw new Error("Application non trouvée ou non autorisée");
     }
 
+    const existing = (await sql.query(
+      `SELECT id FROM app_plans WHERE app_id = $1 AND LOWER(plan_key) = LOWER($2) LIMIT 1`,
+      [data.appId, planKey],
+    )) as { id: string }[];
+
     try {
-      const newPlan = (await sql`
+      if (existing.length > 0) {
+        const updated = (await sql`
+          UPDATE app_plans
+          SET plan_key = ${planKey},
+              name = ${data.name},
+              amount = ${data.amount},
+              currency = ${data.currency},
+              period = ${data.period},
+              description = ${data.description || null},
+              active = true,
+              updated_at = now()
+          WHERE id = ${existing[0].id} AND app_id = ${data.appId}
+          RETURNING id, plan_key, name, amount::float8, currency, period, description, active
+        `) as Array<{
+          id: string;
+          plan_key: string;
+          name: string;
+          amount: number;
+          currency: string;
+          period: string;
+          description: string | null;
+          active: boolean;
+        }>;
+
+        return updated[0];
+      }
+
+      const inserted = (await sql`
         INSERT INTO app_plans (app_id, plan_key, name, amount, currency, period, description, active)
-        VALUES (${data.appId}, ${data.planKey}, ${data.name}, ${data.amount}, ${data.currency}, ${data.period}, ${data.description || null}, true)
-        ON CONFLICT (app_id, plan_key) DO UPDATE SET
-          name = EXCLUDED.name,
-          amount = EXCLUDED.amount,
-          currency = EXCLUDED.currency,
-          period = EXCLUDED.period,
-          description = EXCLUDED.description,
-          active = true,
-          updated_at = now()
+        VALUES (${data.appId}, ${planKey}, ${data.name}, ${data.amount}, ${data.currency}, ${data.period}, ${data.description || null}, true)
         RETURNING id, plan_key, name, amount::float8, currency, period, description, active
       `) as Array<{
         id: string;
@@ -103,10 +140,35 @@ export const createAppPlan = createServerFn({ method: "POST" })
         active: boolean;
       }>;
 
-      return newPlan[0];
-    } catch (error) {
+      return inserted[0];
+    } catch (error: any) {
+      // Si deux requêtes concurrentes ont tenté la même clé, relire puis
+      // mettre à jour le plan existant au lieu d'exposer une erreur 23505.
+      if (error?.code === "23505") {
+        const concurrent = (await sql.query(
+          `SELECT id FROM app_plans WHERE app_id = $1 AND LOWER(plan_key) = LOWER($2) LIMIT 1`,
+          [data.appId, planKey],
+        )) as { id: string }[];
+
+        if (concurrent.length > 0) {
+          const updated = (await sql`
+            UPDATE app_plans
+            SET name = ${data.name},
+                amount = ${data.amount},
+                currency = ${data.currency},
+                period = ${data.period},
+                description = ${data.description || null},
+                active = true,
+                updated_at = now()
+            WHERE id = ${concurrent[0].id} AND app_id = ${data.appId}
+            RETURNING id, plan_key, name, amount::float8, currency, period, description, active
+          `) as Array<any>;
+          if (updated[0]) return updated[0];
+        }
+      }
+
       console.error("[createAppPlan] Erreur:", error);
-      throw new Error("Impossible de créer le plan. Vérifiez que la clé du plan est unique.");
+      throw new Error("Impossible d'enregistrer ce plan. Utilisez une clé différente si cette clé est déjà utilisée par une autre application.");
     }
   });
 
@@ -130,7 +192,6 @@ export const updateAppPlan = createServerFn({ method: "POST" })
     const user = await requireUser();
     const sql = db();
 
-    // Vérifier que l'app appartient à l'utilisateur
     const appCheck = (await sql.query(
       `SELECT id FROM apps WHERE id = $1 AND owner_id = $2`,
       [data.appId, user.id],
@@ -141,7 +202,7 @@ export const updateAppPlan = createServerFn({ method: "POST" })
     }
 
     await sql`
-      UPDATE app_plans 
+      UPDATE app_plans
       SET name = ${data.name},
           amount = ${data.amount},
           currency = ${data.currency},
@@ -169,7 +230,6 @@ export const deleteAppPlan = createServerFn({ method: "POST" })
     const user = await requireUser();
     const sql = db();
 
-    // Vérifier que l'app appartient à l'utilisateur
     const appCheck = (await sql.query(
       `SELECT id FROM apps WHERE id = $1 AND owner_id = $2`,
       [data.appId, user.id],
@@ -180,7 +240,7 @@ export const deleteAppPlan = createServerFn({ method: "POST" })
     }
 
     await sql`
-      UPDATE app_plans 
+      UPDATE app_plans
       SET active = false, updated_at = now()
       WHERE id = ${data.planId} AND app_id = ${data.appId}
     `;
@@ -223,7 +283,6 @@ export const updateExchangeRate = createServerFn({ method: "POST" })
     const user = await requireUser();
     const sql = db();
 
-    // Vérifier que l'utilisateur est admin (optionnel, à adapter selon votre logique)
     const isAdmin = user.role === "admin" || user.email?.endsWith("@zaka.ht");
     if (!isAdmin) {
       throw new Error("Non autorisé. Seuls les administrateurs peuvent modifier les taux de change.");
