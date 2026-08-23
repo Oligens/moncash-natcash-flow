@@ -10,9 +10,7 @@ import { resolveAppByApiKey } from "@/lib/checkout.functions";
 import { useState, useEffect } from "react";
 
 const searchSchema = z.object({
-  apikey: z.string().trim().min(1).max(120).optional(),
-  api_key: z.string().trim().min(1).max(120).optional(),
-  key: z.string().trim().min(1).max(120).optional(),
+  api_key: z.string().trim().min(1).max(120),
   plan: z.string().trim().min(1).max(80).optional(),
   user_id: z.string().trim().max(80).optional(),
 });
@@ -22,14 +20,11 @@ type SearchParams = z.infer<typeof searchSchema>;
 function normalizeSearchParams(search: unknown): SearchParams {
   const parsed = searchSchema.safeParse(search || {});
   if (!parsed.success) {
-    console.error("[PayPage] Erreur de validation des paramètres:", parsed.error);
-    return {};
+    console.error("[PayPage] Invalid payment URL:", parsed.error);
+    return {} as SearchParams;
   }
-  const apiKey = parsed.data.apikey || parsed.data.api_key || parsed.data.key;
   return {
-    apikey: apiKey,
-    api_key: apiKey,
-    key: apiKey,
+    api_key: parsed.data.api_key,
     plan: parsed.data.plan?.trim().toLowerCase(),
     user_id: parsed.data.user_id,
   };
@@ -48,7 +43,7 @@ export const Route = createFileRoute("/pay")({
 
 function PayPage() {
   const search = Route.useSearch();
-  const apiKey = search.apikey || search.api_key || search.key;
+  const apiKey = search.api_key;
   const userId = search.user_id;
   const planKey = search.plan;
   const resolve = useServerFn(resolveAppByApiKey);
@@ -58,7 +53,6 @@ function PayPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["pay-app", apiKey],
     queryFn: async () => {
-      if (!apiKey) throw new Error("Clé API manquante");
       try {
         const result = await resolve({ data: { apiKey } });
         setHasLoaded(true);
@@ -85,7 +79,7 @@ function PayPage() {
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/10 p-6">
           <AlertTriangle className="size-10 text-destructive" />
           <h1 className="font-display text-xl font-bold">Lien invalide</h1>
-          <p className="text-sm text-muted-foreground">La clé API du développeur est manquante ou invalide.</p>
+          <p className="text-sm text-muted-foreground">Le paramètre api_key est obligatoire.</p>
         </div>
       </main>
     );
@@ -121,7 +115,7 @@ function PayPage() {
       <p className="text-sm text-muted-foreground">
         {planKey ? `Plan sélectionné : ${planKey}` : "Sélectionnez votre plan."} Paiement via MonCash ou Natcash.
       </p>
-      <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} defaultPlan={planKey} />
+      <PaymentTunnel appId={data.id} userId={userId ?? "web_user"} requestedPlan={planKey} plans={data.plans} />
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ShieldCheck className="size-4 text-primary" /> Paiement hébergé et sécurisé par Zaka
       </p>
