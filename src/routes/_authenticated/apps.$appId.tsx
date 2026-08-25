@@ -175,6 +175,187 @@ function AppDetailPage() {
               <Callout title="Étape 2 — Le bouton « Passer en Pro »">Insérez un bouton dans votre application. Au clic, redirigez simplement l'utilisateur vers cette URL. Zaka se charge de tout le processus de paiement (choix du plan, MonCash/Natcash, confirmation SMS).</Callout>
               <Callout title="Étape 3 — Validation du paiement">Une fois le paiement validé, l'abonnement passe en <code>active</code>. Votre serveur peut le vérifier à tout moment via <code>GET /api/public/v1/license/verify?user_id=…</code> avec votre en-tête <code>x-api-key</code>.</Callout>
             </section>
+
+            {/* NOUVELLE SECTION : SNIPPET D'INTÉGRATION PRÊT À L'EMPLOI */}
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-2"><KeyRound className="size-4 text-primary" /><h2 className="text-lg font-semibold">Snippet d'Intégration / Code Prêt à l'Emploi</h2></div>
+              <p className="mt-1 text-sm text-muted-foreground">Copiez ce code React/TypeScript dans votre application pour intégrer le paiement Zaka instantanément.</p>
+              
+              <div className="mt-4 relative">
+                <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
+                  <pre className="max-h-[500px] overflow-auto p-4 text-xs">
+                    <code className="language-typescript">{`/**
+ * SNIPPET D'INTÉGRATION ZAKA - PRÊT À L'EMPLOI
+ * Application: ${app.name}
+ * Clé API: ${showKey ? app.api_key : 'sk_live_...'}
+ */
+
+import React, { useState } from 'react';
+
+const ZAKA_CONFIG = {
+  API_KEY: '${app.api_key}', // Votre clé API
+  BASE_URL: 'https://zakaproht.vercel.app',
+};
+
+interface ZakaPaymentButtonProps {
+  planKey: string;  // Ex: 'pro', 'enterprise'
+  userId: string;   // ID utilisateur connecté
+  children?: React.ReactNode;
+}
+
+export const ZakaPaymentButton: React.FC<ZakaPaymentButtonProps> = ({
+  planKey,
+  userId,
+  children,
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handlePayment = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(\`\${ZAKA_CONFIG.BASE_URL}/api/payment/create-session\`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ZAKA_CONFIG.API_KEY,
+        },
+        body: JSON.stringify({
+          plan_key: planKey,
+          user_id: userId,
+          currency: 'USD',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Échec création session');
+      
+      const session = await response.json();
+      window.location.href = \`\${ZAKA_CONFIG.BASE_URL}/pay?session_id=\${session.session_id}\`;
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handlePayment}
+      disabled={loading}
+      style={{
+        padding: '12px 24px',
+        backgroundColor: loading ? '#ccc' : '#6366f1',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: loading ? 'not-allowed' : 'pointer',
+      }}
+    >
+      {loading ? 'Traitement...' : children || \`Payer \${planKey}\`}
+    </button>
+  );
+};
+
+// EXEMPLE D'UTILISATION
+function PricingPage() {
+  const userId = 'user_123'; // Remplacez par votre utilisateur
+  
+  return (
+    <div>
+      <h3>Plan Pro - $15/mois</h3>
+      <ZakaPaymentButton planKey="pro" userId={userId}>
+        Choisir le Plan Pro
+      </ZakaPaymentButton>
+    </div>
+  );
+}`}</code>
+                  </pre>
+                </div>
+                <Button 
+                  size="sm" 
+                  className="absolute top-2 right-2 gap-2" 
+                  onClick={() => copy(`/**
+ * SNIPPET D'INTÉGRATION ZAKA - ${app.name}
+ */
+
+import React, { useState } from 'react';
+
+const ZAKA_CONFIG = {
+  API_KEY: '${app.api_key}',
+  BASE_URL: 'https://zakaproht.vercel.app',
+};
+
+interface ZakaPaymentButtonProps {
+  planKey: string;
+  userId: string;
+  children?: React.ReactNode;
+}
+
+export const ZakaPaymentButton: React.FC<ZakaPaymentButtonProps> = ({
+  planKey,
+  userId,
+  children,
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handlePayment = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(\`\${ZAKA_CONFIG.BASE_URL}/api/payment/create-session\`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ZAKA_CONFIG.API_KEY,
+        },
+        body: JSON.stringify({
+          plan_key: planKey,
+          user_id: userId,
+          currency: 'USD',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Échec création session');
+      
+      const session = await response.json();
+      window.location.href = \`\${ZAKA_CONFIG.BASE_URL}/pay?session_id=\${session.session_id}\`;
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handlePayment}
+      disabled={loading}
+      style={{
+        padding: '12px 24px',
+        backgroundColor: loading ? '#ccc' : '#6366f1',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: loading ? 'not-allowed' : 'pointer',
+      }}
+    >
+      {loading ? 'Traitement...' : children || \`Payer \${planKey}\`}
+    </button>
+  );
+};`, "Code snippet copié !")}
+                >
+                  <Copy className="size-4" /> Copier le code
+                </Button>
+              </div>
+              
+              <Callout title="Comment utiliser ce snippet ?">
+                <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm">
+                  <li>Copiez le code ci-dessus dans votre projet React/TypeScript</li>
+                  <li>Importez <code>ZakaPaymentButton</code> dans votre page de pricing</li>
+                  <li>Utilisez le composant avec le <code>planKey</code> de votre choix (ex: "pro", "enterprise")</li>
+                  <li>Passez l'<code>userId</code> de l'utilisateur connecté</li>
+                  <li>Le bouton redirigera automatiquement vers le tunnel de paiement Zaka sécurisé</li>
+                </ol>
+              </Callout>
+            </section>
           </div>
         </TabsContent>
 
