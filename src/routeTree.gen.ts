@@ -20,8 +20,6 @@ import { Route as AuthenticatedApiDocsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRelayRouteImport } from './routes/_authenticated/relay'
 import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps.$appId'
-import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
-import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiPublicWebhookSmsRouteImport } from './routes/api/public/webhook/sms'
 import { Route as ApiPublicV1CheckoutInitRouteImport } from './routes/api/public/v1/checkout/init'
 import { Route as ApiPublicV1LicenseVerifyRouteImport } from './routes/api/public/v1/license/verify'
@@ -82,16 +80,6 @@ const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
   path: '/apps/$appId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
-  id: '/api/auth/google',
-  path: '/api/auth/google',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => ApiAuthGoogleRoute,
-} as any)
 const ApiPublicWebhookSmsRoute = ApiPublicWebhookSmsRouteImport.update({
   id: '/api/public/webhook/sms',
   path: '/api/public/webhook/sms',
@@ -125,8 +113,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
-  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
-  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -143,8 +129,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/relay': typeof AuthenticatedRelayRoute
   '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
-  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
-  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -163,8 +147,6 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/relay': typeof AuthenticatedRelayRoute
   '/_authenticated/apps/$appId': typeof AuthenticatedAppsAppIdRoute
-  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
-  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/webhook/sms': typeof ApiPublicWebhookSmsRoute
   '/api/public/v1/checkout/init': typeof ApiPublicV1CheckoutInitRoute
   '/api/public/v1/license/verify': typeof ApiPublicV1LicenseVerifyRoute
@@ -183,8 +165,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
-    | '/api/auth/google'
-    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -201,8 +181,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/relay'
     | '/apps/$appId'
-    | '/api/auth/google'
-    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -220,8 +198,6 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/relay'
     | '/_authenticated/apps/$appId'
-    | '/api/auth/google'
-    | '/api/auth/google/callback'
     | '/api/public/webhook/sms'
     | '/api/public/v1/checkout/init'
     | '/api/public/v1/license/verify'
@@ -234,7 +210,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PayRoute: typeof PayRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiPublicWebhookSmsRoute: typeof ApiPublicWebhookSmsRoute
   ApiPublicV1CheckoutInitRoute: typeof ApiPublicV1CheckoutInitRoute
   ApiPublicV1LicenseVerifyRoute: typeof ApiPublicV1LicenseVerifyRoute
@@ -320,20 +295,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppsAppIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/auth/google': {
-      id: '/api/auth/google'
-      path: '/api/auth/google'
-      fullPath: '/api/auth/google'
-      preLoaderRoute: typeof ApiAuthGoogleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/google/callback': {
-      id: '/api/auth/google/callback'
-      path: '/callback'
-      fullPath: '/api/auth/google/callback'
-      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
-      parentRoute: typeof ApiAuthGoogleRoute
-    }
     '/api/public/webhook/sms': {
       id: '/api/public/webhook/sms'
       path: '/api/public/webhook/sms'
@@ -386,25 +347,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface ApiAuthGoogleRouteChildren {
-  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
-}
-
-const ApiAuthGoogleRouteChildren: ApiAuthGoogleRouteChildren = {
-  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
-}
-
-const ApiAuthGoogleRouteWithChildren = ApiAuthGoogleRoute._addFileChildren(
-  ApiAuthGoogleRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   PayRoute: PayRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiPublicWebhookSmsRoute: ApiPublicWebhookSmsRoute,
   ApiPublicV1CheckoutInitRoute: ApiPublicV1CheckoutInitRoute,
   ApiPublicV1LicenseVerifyRoute: ApiPublicV1LicenseVerifyRoute,
