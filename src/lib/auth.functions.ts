@@ -15,7 +15,7 @@ export const signUp = createServerFn({ method: "POST" })
     const email = data.email.toLowerCase();
 
     const existing = (await sql`SELECT id FROM users WHERE lower(email) = ${email} LIMIT 1`) as { id: string }[];
-    if (existing.length) return { ok: false as const, error: "Un compte existe déjà avec cet email" };
+    if (existing.length) throw new Error("Un compte existe déjà avec cet email");
 
     const claimed = (await sql`SELECT count(*)::int AS n FROM users WHERE password_hash IS NOT NULL`) as { n: number }[];
     const isFirst = (claimed[0]?.n ?? 0) === 0;
@@ -26,8 +26,7 @@ export const signUp = createServerFn({ method: "POST" })
       VALUES (${email}, ${hash}, ${isFirst})
       RETURNING id
     `) as { id: string }[];
-    const userId = rows[0]?.id;
-    if (!userId) return { ok: false as const, error: "Impossible de créer le compte" };
+    const userId = rows[0]!.id;
 
     if (isFirst) {
       await sql`
@@ -38,7 +37,7 @@ export const signUp = createServerFn({ method: "POST" })
     }
 
     await createSession(userId);
-    return { ok: true as const, userId, isAdmin: isFirst };
+    return { userId, isAdmin: isFirst };
   });
 
 export const signIn = createServerFn({ method: "POST" })
@@ -54,16 +53,11 @@ export const signIn = createServerFn({ method: "POST" })
       LIMIT 1
     `) as { id: string; password_hash: string | null; is_admin: boolean }[];
     const user = rows[0];
-
-    // Expected credential failures are returned as data, not thrown as
-    // server errors, so the browser no longer reports a misleading HTTP 500.
-    if (!user?.password_hash) return { ok: false as const, error: "Identifiants invalides" };
-    if (!(await verifyPassword(data.password, user.password_hash))) {
-      return { ok: false as const, error: "Identifiants invalides" };
-    }
+    if (!user?.password_hash) throw new Error("Identifiants invalides");
+    if (!(await verifyPassword(data.password, user.password_hash))) throw new Error("Identifiants invalides");
 
     await createSession(user.id);
-    return { ok: true as const, userId: user.id, isAdmin: user.is_admin };
+    return { userId: user.id, isAdmin: user.is_admin };
   });
 
 export const signOut = createServerFn({ method: "POST" }).handler(async () => {
