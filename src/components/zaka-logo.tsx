@@ -1,16 +1,29 @@
-import logoAsset from "@/assets/zaka-logo.png.asset.json";
 import { cn } from "@/lib/utils";
 
 export function ZakaMark({ className }: { className?: string }) {
   return (
-    <img
-      src={logoAsset.url}
+    <svg
+      viewBox="0 0 72 72"
       alt="Logo Zaka"
-      width={72}
-      height={72}
-      className={cn("size-8 shrink-0 object-contain sm:size-9", className)}
-      decoding="async"
-    />
+      className={cn("size-8 shrink-0 sm:size-9", className)}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="zakaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7c3aed" />
+          <stop offset="100%" stopColor="#ec4899" />
+        </linearGradient>
+      </defs>
+      <circle cx="36" cy="36" r="34" fill="url(#zakaGrad)" />
+      <path
+        d="M24 36l8 12 16-24"
+        stroke="white"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
   );
 }
 
