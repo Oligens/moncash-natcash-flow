@@ -12,7 +12,7 @@ const initSchema = z.object({
 
 /** Démo interne du tunnel de paiement (les apps tierces passent par /api/v1/checkout/init). */
 export const initDemoCheckout = createServerFn({ method: "POST" })
-  .inputValidator((input) => initSchema.parse(input))
+  .validator((input) => initSchema.parse(input))
   .handler(async ({ data }) => {
     const { db } = await import("./db.server");
     const sql = db();
@@ -53,7 +53,7 @@ export const initDemoCheckout = createServerFn({ method: "POST" })
   });
 
 export const getCheckoutStatus = createServerFn({ method: "GET" })
-  .inputValidator((input) => z.object({ subscriptionId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ subscriptionId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { db } = await import("./db.server");
     const sql = db();
