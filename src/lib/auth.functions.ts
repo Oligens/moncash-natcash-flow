@@ -14,24 +14,20 @@ export const signUp = createServerFn({ method: "POST" })
     const sql = db();
     const email = data.email.toLowerCase();
 
-    const existing = (await sql`SELECT id FROM users WHERE lower(email) = ${email}`) as {
-      id: string;
-    }[];
-    if (existing.length) throw new Error("Un compte existe déjà avec cet email");
+    const existing = (await sql`SELECT id FROM users WHERE lower(email) = ${email} LIMIT 1`) as { id: string }[];
+    if (existing.length) return { ok: false as const, error: "Un compte existe déjà avec cet email" };
 
-    // Premier compte réel de la plateforme : il devient administrateur et
-    // récupère les applications héritées de l'ancienne base.
-    const claimed = (await sql`SELECT count(*)::int AS n FROM users WHERE password_hash IS NOT NULL`) as {
-      n: number;
-    }[];
+    const claimed = (await sql`SELECT count(*)::int AS n FROM users WHERE password_hash IS NOT NULL`) as { n: number }[];
     const isFirst = (claimed[0]?.n ?? 0) === 0;
-
     const hash = await hashPassword(data.password);
+
     const rows = (await sql`
-      INSERT INTO users (email, password_hash, is_admin) VALUES (${email}, ${hash}, ${isFirst})
+      INSERT INTO users (email, password_hash, is_admin)
+      VALUES (${email}, ${hash}, ${isFirst})
       RETURNING id
     `) as { id: string }[];
-    const userId = rows[0]!.id;
+    const userId = rows[0]?.id;
+    if (!userId) return { ok: false as const, error: "Impossible de créer le compte" };
 
     if (isFirst) {
       await sql`
@@ -42,7 +38,7 @@ export const signUp = createServerFn({ method: "POST" })
     }
 
     await createSession(userId);
-    return { userId, isAdmin: isFirst };
+    return { ok: true as const, userId, isAdmin: isFirst };
   });
 
 export const signIn = createServerFn({ method: "POST" })
@@ -52,15 +48,22 @@ export const signIn = createServerFn({ method: "POST" })
     const { verifyPassword, createSession } = await import("./auth.server");
     const sql = db();
     const rows = (await sql`
-      SELECT id, password_hash, is_admin FROM users WHERE lower(email) = ${data.email.toLowerCase()} LIMIT 1
+      SELECT id, password_hash, is_admin
+      FROM users
+      WHERE lower(email) = ${data.email.toLowerCase()}
+      LIMIT 1
     `) as { id: string; password_hash: string | null; is_admin: boolean }[];
     const user = rows[0];
-    if (!user?.password_hash) throw new Error("Identifiants invalides");
-    if (!(await verifyPassword(data.password, user.password_hash)))
-      throw new Error("Identifiants invalides");
+
+    // Expected credential failures are returned as data, not thrown as
+    // server errors, so the browser no longer reports a misleading HTTP 500.
+    if (!user?.password_hash) return { ok: false as const, error: "Identifiants invalides" };
+    if (!(await verifyPassword(data.password, user.password_hash))) {
+      return { ok: false as const, error: "Identifiants invalides" };
+    }
 
     await createSession(user.id);
-    return { userId: user.id, isAdmin: user.is_admin };
+    return { ok: true as const, userId: user.id, isAdmin: user.is_admin };
   });
 
 export const signOut = createServerFn({ method: "POST" }).handler(async () => {
